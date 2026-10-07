@@ -116,12 +116,13 @@ video{width:100%;height:100%;object-fit:cover;display:block}
   <button id="nextBtn" class="btn btn-primary" style="margin-top:14px">Next Quest →</button>
   <p class="small">Image analyzed locally. Not uploaded.</p>
 </div></div>
+
 <script type="module">
-import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.4/dist/transformers.min.js';
+import { pipeline, env } from
+  'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.4/dist/transformers.min.js';
 
 env.allowLocalModels = false;
 env.allowRemoteModels = true;
-env.backends.onnx.wasm.numThreads = 1;
 
 const bar = document.getElementById('bar');
 const meta = document.getElementById('meta');
@@ -137,68 +138,89 @@ const steps = [
 function setStep(n) {
   steps.forEach((s, i) => {
     s.classList.toggle('on', i === n);
-    if (i < n) s.classList.add('done');
+
+    if (i < n) {
+      s.classList.add('done');
+    }
   });
 }
 
-setStep(0);
+
+/* =========================================================
+   AI MODEL
+   ========================================================= */
 
 let detector = null;
-
-/*
- * ---------------------------------------------------------
- * MODEL LOADING
- * ---------------------------------------------------------
- */
+let usingWebGPU = false;
 
 async function loadModel() {
+
   setStep(1);
-  meta.textContent = 'Loading AI engine…';
+
+  meta.textContent =
+    'Loading lightweight vision AI…';
 
   try {
-    detector = await pipeline(
-      'zero-shot-object-detection',
-      'Xenova/owlvit-base-patch32',
-      {
-        progress_callback: (p) => {
-          if (p.status === 'progress') {
-            const progress = Number.isFinite(p.progress)
-              ? p.progress
-              : p.total
-                ? (p.loaded / p.total) * 100
-                : 0;
 
-            const pct = Math.max(0, Math.min(100, progress));
+    /*
+     * Try WebGPU first.
+     * This can be considerably faster on supported phones/browsers.
+     */
 
-            bar.style.width = pct + '%';
+    if ('gpu' in navigator) {
 
-            const loaded = p.loaded
-              ? (p.loaded / 1024 / 1024).toFixed(2)
-              : '0.00';
+      try {
 
-            const total = p.total
-              ? (p.total / 1024 / 1024).toFixed(2)
-              : '—';
+        meta.textContent =
+          'Starting GPU vision engine…';
 
-            const file = p.file
-              ? p.file.split('/').pop()
-              : 'model';
+        detector = await pipeline(
+          'object-detection',
+          'Xenova/yolos-tiny',
+          {
+            device: 'webgpu',
+            dtype: 'fp32',
 
-            meta.textContent =
-              `${loaded} MB / ${total} MB — Downloading ${file}…`;
-
-            setStep(1);
-
-            if (
-              file.toLowerCase().includes('model') ||
-              file.toLowerCase().includes('config')
-            ) {
-              setStep(2);
-            }
+            progress_callback: handleProgress
           }
-        }
+        );
+
+        usingWebGPU = true;
+
+      } catch (gpuError) {
+
+        console.warn(
+          'WebGPU unavailable, falling back to WASM:',
+          gpuError
+        );
+
+        detector = null;
       }
-    );
+    }
+
+
+    /*
+     * WASM fallback.
+     */
+
+    if (!detector) {
+
+      meta.textContent =
+        'Loading lightweight vision model…';
+
+      detector = await pipeline(
+        'object-detection',
+        'Xenova/yolos-tiny',
+        {
+          dtype: 'q8',
+
+          progress_callback: handleProgress
+        }
+      );
+
+      usingWebGPU = false;
+    }
+
 
     bar.style.width = '100%';
 
@@ -208,111 +230,173 @@ async function loadModel() {
     steps[1].querySelector('b').textContent = '✓';
     steps[2].querySelector('b').textContent = '✓';
 
-    meta.textContent = '✓ AI model ready — cached locally';
+    meta.textContent =
+      usingWebGPU
+        ? '✓ AI ready — GPU acceleration enabled'
+        : '✓ AI ready — running locally';
 
-    console.log('OWL-ViT loaded:', detector);
+    console.log(
+      'NatureMate detector ready',
+      {
+        model: 'YOLOS-Tiny',
+        backend: usingWebGPU ? 'WebGPU' : 'WASM'
+      }
+    );
 
   } catch (error) {
-    console.error('Model loading failed:', error);
+
+    console.error(
+      'AI model failed:',
+      error
+    );
 
     meta.textContent =
-      'AI model failed to load: ' + error.message;
+      'AI loading failed: ' + error.message;
 
-    /*
-     * Do NOT try YOLOS here.
-     *
-     * YOLOS is a normal object-detection model and does not
-     * support arbitrary text queries like OWL-ViT.
-     */
     throw error;
   }
 }
 
 
-/*
- * ---------------------------------------------------------
- * GAME DATA
- * ---------------------------------------------------------
- */
+function handleProgress(p) {
+
+  if (p.status === 'progress') {
+
+    let percent = 0;
+
+    if (
+      typeof p.progress === 'number' &&
+      Number.isFinite(p.progress)
+    ) {
+
+      percent = p.progress;
+
+    } else if (
+      p.total &&
+      p.loaded
+    ) {
+
+      percent =
+        (p.loaded / p.total) * 100;
+    }
+
+    percent =
+      Math.max(
+        0,
+        Math.min(100, percent)
+      );
+
+    bar.style.width =
+      percent + '%';
+
+
+    const loaded =
+      p.loaded
+        ? (p.loaded / 1024 / 1024).toFixed(2)
+        : '0.00';
+
+    const total =
+      p.total
+        ? (p.total / 1024 / 1024).toFixed(2)
+        : '—';
+
+
+    const filename =
+      p.file
+        ? p.file.split('/').pop()
+        : 'vision model';
+
+
+    meta.textContent =
+      `${loaded} MB / ${total} MB — ${filename}`;
+
+
+    setStep(2);
+  }
+}
+
+
+/* =========================================================
+   GAME DATA
+   ========================================================= */
 
 const OBJECTS = [
+
   {
     id: 'bench',
     label: 'bench',
-    queries: ['a bench', 'a park bench'],
     diff: 1,
     reward: 50,
     coins: 10
   },
+
   {
     id: 'bicycle',
     label: 'bicycle',
-    queries: ['a bicycle', 'a bike'],
     diff: 1,
     reward: 50,
     coins: 10
   },
+
   {
     id: 'car',
     label: 'car',
-    queries: ['a car', 'a parked car'],
     diff: 1,
     reward: 50,
     coins: 10
   },
+
   {
     id: 'person',
     label: 'person',
-    queries: ['a person', 'a human'],
     diff: 1,
     reward: 50,
     coins: 10
   },
+
   {
     id: 'dog',
     label: 'dog',
-    queries: ['a dog'],
     diff: 1,
     reward: 55,
     coins: 12
   },
+
   {
     id: 'chair',
     label: 'chair',
-    queries: ['a chair'],
     diff: 1,
     reward: 50,
     coins: 10
   },
+
   {
     id: 'bottle',
     label: 'bottle',
-    queries: ['a bottle', 'a water bottle'],
     diff: 2,
     reward: 65,
     coins: 15
   },
+
   {
     id: 'potted plant',
     label: 'plant',
-    queries: ['a plant', 'a potted plant', 'a tree'],
     diff: 2,
     reward: 75,
-    coins: 18,
-    aliases: ['tree']
+    coins: 18
   },
+
   {
     id: 'bus',
     label: 'bus',
-    queries: ['a bus'],
     diff: 2,
     reward: 70,
     coins: 15
   },
+
   {
     id: 'truck',
     label: 'truck',
-    queries: ['a truck', 'a large vehicle'],
     diff: 2,
     reward: 70,
     coins: 15
@@ -320,154 +404,201 @@ const OBJECTS = [
 ];
 
 
+/* =========================================================
+   STATE
+   ========================================================= */
+
 let state = {
+
   level: 1,
+
   xp: 0,
+
   xpNeed: 200,
+
   coins: 0,
+
   streak: 0,
+
   missions: 0,
+
   run: null,
+
   quest: null,
+
   seq: 0
 };
 
 
 function xpForNext(level) {
+
   return 180 + level * 60;
 }
 
 
+/* =========================================================
+   QUEST GENERATION
+   ========================================================= */
+
 function genQuest() {
+
   const lvl = state.level;
 
-  const pool = OBJECTS.filter(
-    o => lvl >= 3 || o.diff <= 2
-  );
+  const pool =
+    OBJECTS.filter(
+      o => lvl >= 3 || o.diff <= 2
+    );
+
 
   let type = 'object';
 
-  if (lvl >= 3 && Math.random() < 0.5) {
+
+  if (
+    lvl >= 3 &&
+    Math.random() < 0.5
+  ) {
+
     type = 'combination';
   }
 
-  if (lvl >= 4 && state.seq > 0) {
-    type = 'sequence';
-  }
 
+  /*
+   * Keep sequence missions disabled for now.
+   *
+   * They can be added later once the basic
+   * object-detection loop is stable.
+   */
 
   if (type === 'object') {
 
     const o =
-      pool[Math.floor(Math.random() * pool.length)];
+      pool[
+        Math.floor(
+          Math.random() * pool.length
+        )
+      ];
+
 
     return {
+
       type: 'object',
+
       target: o,
+
       secondary: null,
+
       diff: o.diff,
+
       reward: o.reward,
-      desc: `Find a ${o.label.toUpperCase()} outside.`
-    };
 
-  }
-
-
-  if (type === 'combination') {
-
-    const a =
-      pool[Math.floor(Math.random() * pool.length)];
-
-    let b =
-      pool[Math.floor(Math.random() * pool.length)];
-
-    while (b.id === a.id) {
-      b =
-        pool[Math.floor(Math.random() * pool.length)];
-    }
-
-    return {
-      type: 'combination',
-      target: a,
-      secondary: b,
-      relationship: 'near',
-      diff: 3,
-      reward: 100,
       desc:
-        `Find a ${a.label.toUpperCase()} with a ${b.label.toUpperCase()} nearby. One photo must contain both.`
+        `Find a ${o.label.toUpperCase()} outside.`
     };
-
   }
 
 
   const a =
-    pool[Math.floor(Math.random() * pool.length)];
+    pool[
+      Math.floor(
+        Math.random() * pool.length
+      )
+    ];
+
 
   let b =
-    pool[Math.floor(Math.random() * pool.length)];
+    pool[
+      Math.floor(
+        Math.random() * pool.length
+      )
+    ];
+
 
   while (b.id === a.id) {
+
     b =
-      pool[Math.floor(Math.random() * pool.length)];
+      pool[
+        Math.floor(
+          Math.random() * pool.length
+        )
+      ];
   }
 
+
   return {
-    type: 'sequence',
+
+    type: 'combination',
+
     target: a,
+
     secondary: b,
-    steps: 2,
-    diff: 4,
-    reward: 140,
+
+    diff: 3,
+
+    reward: 100,
+
     desc:
-      `MISSION: 1) Find a ${a.label.toUpperCase()} → 2) Find a ${b.label.toUpperCase()}. Walk somewhere new between!`
+      `Find a ${a.label.toUpperCase()} with a ${b.label.toUpperCase()} nearby. One photo must contain both.`
   };
 }
 
+
+/* =========================================================
+   QUEST UI
+   ========================================================= */
 
 function renderQuest() {
 
   const q = state.quest;
 
-  document.getElementById('qTitle').textContent =
+
+  document.getElementById(
+    'qTitle'
+  ).textContent =
     q.desc;
 
-  document.getElementById('qType').textContent =
+
+  document.getElementById(
+    'qType'
+  ).textContent =
     q.type.toUpperCase();
 
-  document.getElementById('qDiff').textContent =
+
+  document.getElementById(
+    'qDiff'
+  ).textContent =
     'Difficulty ' +
     '★'.repeat(q.diff) +
-    '☆'.repeat(Math.max(0, 4 - q.diff));
+    '☆'.repeat(
+      Math.max(0, 4 - q.diff)
+    );
 
-  document.getElementById('rXp').textContent =
+
+  document.getElementById(
+    'rXp'
+  ).textContent =
     '+' + q.reward + ' XP';
 
-  document.getElementById('rCoin').textContent =
-    '+' + Math.round(q.reward / 3) + ' 🌱 Coins';
 
-  if (q.type === 'combination') {
+  document.getElementById(
+    'rCoin'
+  ).textContent =
+    '+' +
+    Math.round(q.reward / 3) +
+    ' 🌱 Coins';
 
-    document.getElementById('qDesc').textContent =
-      'Both objects must appear in the SAME captured photo.';
 
-  } else if (q.type === 'sequence') {
-
-    document.getElementById('qDesc').textContent =
-      `Step ${state.seq + 1} of 2 — complete current, then move.`;
-
-  } else {
-
-    document.getElementById('qDesc').textContent =
-      'Go outside, frame it well, then capture.';
-  }
+  document.getElementById(
+    'qDesc'
+  ).textContent =
+    q.type === 'combination'
+      ? 'Both objects must appear in the SAME captured photo.'
+      : 'Go outside, frame it well, then capture.';
 }
 
 
-/*
- * ---------------------------------------------------------
- * CAMERA
- * ---------------------------------------------------------
- */
+/* =========================================================
+   CAMERA
+   ========================================================= */
 
 async function setupCamera() {
 
@@ -475,99 +606,139 @@ async function setupCamera() {
 
   try {
 
-    if (!navigator.mediaDevices?.getUserMedia) {
+    if (
+      !navigator.mediaDevices ||
+      !navigator.mediaDevices.getUserMedia
+    ) {
+
       throw new Error(
-        'Camera API is not available. Use HTTPS or localhost.'
+        'Camera API unavailable'
       );
     }
 
+
     const stream =
       await navigator.mediaDevices.getUserMedia({
+
         video: {
+
           facingMode: {
             ideal: 'environment'
           },
+
           width: {
             ideal: 1280
           },
+
           height: {
             ideal: 720
           }
         },
+
         audio: false
       });
 
+
     const video =
-      document.getElementById('video');
+      document.getElementById(
+        'video'
+      );
+
 
     video.srcObject = stream;
 
     await video.play();
 
+
     setStep(4);
 
-    steps[3].querySelector('b').textContent = '✓';
+    steps[3]
+      .querySelector('b')
+      .textContent = '✓';
+
 
     setTimeout(() => {
 
       setStep(5);
 
-      steps[4].querySelector('b').textContent = '✓';
+      steps[4]
+        .querySelector('b')
+        .textContent = '✓';
 
-      document.getElementById('loading').style.display =
-        'none';
 
-      document.getElementById('app').style.display =
-        'block';
+      document.getElementById(
+        'loading'
+      ).style.display = 'none';
 
-    }, 600);
+
+      document.getElementById(
+        'app'
+      ).style.display = 'block';
+
+    }, 500);
+
 
   } catch (error) {
 
-    console.error('Camera error:', error);
+    console.error(
+      'Camera error:',
+      error
+    );
+
 
     meta.textContent =
-      'Camera unavailable — allow camera permission and try again.';
+      'Camera unavailable — allow camera permission.';
 
-    document.getElementById('loading').style.display =
-      'none';
 
-    document.getElementById('app').style.display =
-      'block';
+    document.getElementById(
+      'loading'
+    ).style.display = 'none';
+
+
+    document.getElementById(
+      'app'
+    ).style.display = 'block';
   }
 }
 
 
-/*
- * ---------------------------------------------------------
- * HUD
- * ---------------------------------------------------------
- */
+/* =========================================================
+   HUD
+   ========================================================= */
 
 function updateHud() {
 
-  document.getElementById('level').textContent =
+  document.getElementById(
+    'level'
+  ).textContent =
     'Lvl ' + state.level;
 
-  document.getElementById('xpFill').style.width =
+
+  document.getElementById(
+    'xpFill'
+  ).style.width =
     Math.min(
       100,
-      state.xp / state.xpNeed * 100
+      (state.xp / state.xpNeed) * 100
     ) + '%';
 
-  document.getElementById('streak').textContent =
+
+  document.getElementById(
+    'streak'
+  ).textContent =
     state.streak;
 
-  document.getElementById('coins').textContent =
+
+  document.getElementById(
+    'coins'
+  ).textContent =
     state.coins;
 }
 
 
-/*
- * ---------------------------------------------------------
- * STARTUP
- * ---------------------------------------------------------
- */
+/* =========================================================
+   START
+   ========================================================= */
 
 try {
 
@@ -575,49 +746,56 @@ try {
 
 } catch (error) {
 
-  console.error(error);
+  document.getElementById(
+    'loading'
+  ).style.display = 'none';
 
-  /*
-   * Give the user a usable UI instead of leaving
-   * the loading screen stuck forever.
-   */
-  document.getElementById('loading').style.display =
-    'none';
-
-  document.getElementById('app').style.display =
-    'block';
+  document.getElementById(
+    'app'
+  ).style.display = 'block';
 
   alert(
-    'The local AI model could not be loaded. Check your internet connection and reload the page.'
+    'NatureMate AI could not load. Please reload the page and check your connection.'
   );
 }
 
+
 await setupCamera();
 
-state.quest = genQuest();
+
+state.quest =
+  genQuest();
+
 
 renderQuest();
 
 updateHud();
 
 
-/*
- * ---------------------------------------------------------
- * CAPTURE & VERIFY
- * ---------------------------------------------------------
- */
+/* =========================================================
+   CAPTURE
+   ========================================================= */
 
 const video =
-  document.getElementById('video');
+  document.getElementById(
+    'video'
+  );
 
 const captureBtn =
-  document.getElementById('capture');
+  document.getElementById(
+    'capture'
+  );
 
 const canvas =
-  document.createElement('canvas');
+  document.createElement(
+    'canvas'
+  );
 
 const capImg =
-  document.getElementById('capImg');
+  document.getElementById(
+    'capImg'
+  );
+
 
 let busy = false;
 
@@ -628,12 +806,16 @@ captureBtn.addEventListener(
 
     if (busy) return;
 
+
     if (!detector) {
+
       alert(
-        'The local AI model is not ready yet.'
+        'AI model is not ready.'
       );
+
       return;
     }
+
 
     busy = true;
 
@@ -653,13 +835,12 @@ captureBtn.addEventListener(
 
 
       canvas.width = w;
+
       canvas.height = h;
 
 
       const ctx =
-        canvas.getContext('2d', {
-          willReadFrequently: false
-        });
+        canvas.getContext('2d');
 
 
       ctx.drawImage(
@@ -674,157 +855,108 @@ captureBtn.addEventListener(
       const dataUrl =
         canvas.toDataURL(
           'image/jpeg',
-          0.85
+          0.82
         );
 
 
-      capImg.src = dataUrl;
+      capImg.src =
+        dataUrl;
 
 
-      const q = state.quest;
+      const q =
+        state.quest;
 
 
       /*
-       * OWL-ViT expects:
+       * YOLOS-Tiny does NOT need labels.
        *
-       * detector(image, candidate_labels)
-       *
-       * NOT the object-detection API.
+       * It returns its detected COCO classes.
        */
-
-      const labels = [
-        ...q.target.queries
-      ];
-
-
-      if (q.secondary) {
-        labels.push(
-          ...q.secondary.queries
-        );
-      }
-
-
-      console.log(
-        'Running OWL-ViT with:',
-        labels
-      );
-
 
       const results =
         await detector(
           dataUrl,
-          labels
+          {
+            threshold: 0.20
+          }
         );
 
 
       console.log(
-        'OWL-ViT results:',
+        'YOLOS detections:',
         results
       );
 
 
       /*
-       * Normalize result format.
-       *
-       * OWL-ViT normally returns:
-       *
-       * [
-       *   {
-       *     score: 0.82,
-       *     label: "a bench",
-       *     box: {...}
-       *   }
-       * ]
+       * Find our target in the
+       * detector's results.
        */
 
-      const detections =
-        Array.isArray(results)
-          ? results
-          : [];
+      function findTarget(target) {
 
-
-      function findBest(queries) {
-
-        let best = null;
-
-        for (const detection of detections) {
-
-          if (!detection) continue;
-
-          const label =
-            String(
-              detection.label || ''
-            ).toLowerCase();
-
-          const match =
-            queries.some(query => {
-
-              const clean =
-                query
-                  .toLowerCase()
-                  .replace(/^a\s+/, '')
-                  .replace(/^an\s+/, '')
-                  .trim();
-
-              return (
-                label.includes(clean) ||
-                clean.includes(label)
-              );
-            });
-
-
-          if (
-            match &&
-            (!best ||
-              detection.score > best.score)
-          ) {
-            best = detection;
-          }
+        if (!target) {
+          return null;
         }
 
-        return best;
+
+        return results
+          .filter(r => {
+
+            const label =
+              String(
+                r.label || ''
+              ).toLowerCase();
+
+
+            return (
+              label ===
+              target.id.toLowerCase()
+            );
+          })
+          .sort(
+            (a, b) =>
+              b.score - a.score
+          )[0] || null;
       }
 
 
       const best =
-        findBest(q.target.queries);
+        findTarget(
+          q.target
+        );
 
 
       const secondBest =
         q.secondary
-          ? findBest(q.secondary.queries)
+          ? findTarget(
+              q.secondary
+            )
           : null;
 
 
       let passed = false;
 
 
-      if (q.type === 'object') {
+      if (
+        q.type === 'object'
+      ) {
 
         passed =
           !!best &&
-          best.score >= 0.18;
-
+          best.score >= 0.30;
       }
 
 
-      if (q.type === 'combination') {
+      if (
+        q.type === 'combination'
+      ) {
 
         passed =
           !!best &&
           !!secondBest &&
-          best.score >= 0.15 &&
-          secondBest.score >= 0.15;
-
-      }
-
-
-      if (q.type === 'sequence') {
-
-        passed =
-          !!best &&
-          best.score >= 0.18;
-
+          best.score >= 0.25 &&
+          secondBest.score >= 0.25;
       }
 
 
@@ -841,7 +973,7 @@ captureBtn.addEventListener(
         showFail(
           best,
           q,
-          detections
+          results
         );
       }
 
@@ -853,16 +985,19 @@ captureBtn.addEventListener(
         error
       );
 
+
       alert(
-        'Inference error: ' +
+        'AI error: ' +
         error.message
       );
+
 
     } finally {
 
       busy = false;
 
-      captureBtn.disabled = false;
+      captureBtn.disabled =
+        false;
 
       captureBtn.textContent =
         '📸 Capture & Verify';
@@ -871,11 +1006,9 @@ captureBtn.addEventListener(
 );
 
 
-/*
- * ---------------------------------------------------------
- * SUCCESS
- * ---------------------------------------------------------
- */
+/* =========================================================
+   SUCCESS
+   ========================================================= */
 
 function showSuccess(
   best,
@@ -884,47 +1017,64 @@ function showSuccess(
 ) {
 
   const res =
-    document.getElementById('res');
+    document.getElementById(
+      'res'
+    );
 
 
-  document.getElementById('resIcon').textContent =
+  document.getElementById(
+    'resIcon'
+  ).textContent =
     '🎉';
 
-  document.getElementById('resTitle').textContent =
+
+  document.getElementById(
+    'resTitle'
+  ).textContent =
     'QUEST COMPLETE';
 
 
-  document.getElementById('resDetail').textContent =
+  document.getElementById(
+    'resDetail'
+  ).textContent =
     q.type === 'combination'
       ? `${q.target.label} + ${q.secondary.label} detected`
       : `${q.target.label} detected`;
 
 
-  document.getElementById('resConf').textContent =
+  document.getElementById(
+    'resConf'
+  ).textContent =
     Math.round(
       (best?.score || 0) * 100
     ) + '%';
 
 
-  document.getElementById('resRewards').textContent =
-    `+${q.reward} XP +${Math.round(
+  const coins =
+    Math.round(
       q.reward / 3
-    )} 🌱 Coins ${
-      q.type === 'combination'
-        ? '• Combo bonus!'
-        : ''
-    }`;
+    );
+
+
+  document.getElementById(
+    'resRewards'
+  ).textContent =
+    `+${q.reward} XP +${coins} 🌱 Coins`;
 
 
   res.classList.add('on');
 
 
-  state.xp += q.reward;
+  state.xp +=
+    q.reward;
+
 
   state.coins +=
-    Math.round(q.reward / 3);
+    coins;
+
 
   state.streak++;
+
 
   state.missions++;
 
@@ -935,61 +1085,32 @@ function showSuccess(
       q.target.id
     );
 
+
     if (q.secondary) {
+
       state.run.done.add(
         q.secondary.id
       );
     }
 
+
     updateRunUI();
   }
 
 
-  if (q.type === 'sequence') {
-
-    state.seq++;
-
-    if (state.seq >= 2) {
-
-      state.seq = 0;
-
-    } else {
-
-      state.quest = {
-        type: 'object',
-        target: q.secondary,
-        secondary: null,
-        diff: q.secondary.diff,
-        reward: 80,
-        desc:
-          `Now find a ${q.secondary.label.toUpperCase()} elsewhere!`
-      };
-
-      if (state.xp >= state.xpNeed) {
-
-        state.level++;
-
-        state.xp = 0;
-
-        state.xpNeed =
-          xpForNext(state.level);
-      }
-
-      updateHud();
-
-      return;
-    }
-  }
-
-
-  if (state.xp >= state.xpNeed) {
+  if (
+    state.xp >=
+    state.xpNeed
+  ) {
 
     state.level++;
 
     state.xp = 0;
 
     state.xpNeed =
-      xpForNext(state.level);
+      xpForNext(
+        state.level
+      );
   }
 
 
@@ -997,11 +1118,9 @@ function showSuccess(
 }
 
 
-/*
- * ---------------------------------------------------------
- * FAILURE
- * ---------------------------------------------------------
- */
+/* =========================================================
+   FAILURE
+   ========================================================= */
 
 function showFail(
   best,
@@ -1010,38 +1129,62 @@ function showFail(
 ) {
 
   const res =
-    document.getElementById('res');
+    document.getElementById(
+      'res'
+    );
 
 
-  document.getElementById('resIcon').textContent =
+  document.getElementById(
+    'resIcon'
+  ).textContent =
     '❌';
 
-  document.getElementById('resTitle').textContent =
+
+  document.getElementById(
+    'resTitle'
+  ).textContent =
     'QUEST NOT COMPLETED';
 
 
-  document.getElementById('resDetail').textContent =
-    `I couldn't confidently find ${q.target.label} in this capture.${
-      all.length === 0
-        ? ' No objects detected — try better light.'
-        : ` Saw ${all
-            .slice(0, 2)
-            .map(r => r.label)
-            .join(', ')} instead.`
-    }`;
+  const detected =
+    all
+      .slice(0, 3)
+      .map(
+        r =>
+          `${r.label} (${Math.round(r.score * 100)}%)`
+      )
+      .join(', ');
 
 
-  document.getElementById('resConf').textContent =
+  document.getElementById(
+    'resDetail'
+  ).textContent =
+    `I couldn't confidently find ${q.target.label}.` +
+    (
+      detected
+        ? ` Detected: ${detected}.`
+        : ' Nothing confident was detected.'
+    );
+
+
+  document.getElementById(
+    'resConf'
+  ).textContent =
     best
-      ? Math.round(best.score * 100) + '%'
+      ? Math.round(
+          best.score * 100
+        ) + '%'
       : '—';
 
 
-  document.getElementById('resRewards').textContent =
-    'Tip: Move closer, improve lighting, point directly at the object, and avoid glare.';
+  document.getElementById(
+    'resRewards'
+  ).textContent =
+    'Try moving closer, improving lighting, and keeping the object clearly inside the frame.';
 
 
   res.classList.add('on');
+
 
   state.streak =
     Math.max(
@@ -1049,15 +1192,14 @@ function showFail(
       state.streak - 1
     );
 
+
   updateHud();
 }
 
 
-/*
- * ---------------------------------------------------------
- * NEXT QUEST
- * ---------------------------------------------------------
- */
+/* =========================================================
+   NEXT QUEST
+   ========================================================= */
 
 document
   .getElementById('nextBtn')
@@ -1070,9 +1212,8 @@ document
         .classList.remove('on');
 
 
-      if (state.seq === 0) {
-        state.quest = genQuest();
-      }
+      state.quest =
+        genQuest();
 
 
       renderQuest();
@@ -1080,11 +1221,9 @@ document
   );
 
 
-/*
- * ---------------------------------------------------------
- * SKIP
- * ---------------------------------------------------------
- */
+/* =========================================================
+   SKIP
+   ========================================================= */
 
 document
   .getElementById('skipBtn')
@@ -1095,7 +1234,9 @@ document
       state.quest =
         genQuest();
 
+
       state.streak = 0;
+
 
       renderQuest();
 
@@ -1104,11 +1245,9 @@ document
   );
 
 
-/*
- * ---------------------------------------------------------
- * TOUCH GRASS RUN
- * ---------------------------------------------------------
- */
+/* =========================================================
+   TOUCH GRASS RUN
+   ========================================================= */
 
 let timer = null;
 
@@ -1132,28 +1271,37 @@ document
 function startRun() {
 
   if (timer) {
+
     clearInterval(timer);
+
     timer = null;
   }
 
 
   const objs =
     [...OBJECTS]
-      .sort(() => 0.5 - Math.random())
+      .sort(
+        () => 0.5 - Math.random()
+      )
       .slice(0, 6);
 
 
   state.run = {
+
     objs,
+
     done: new Set(),
+
     time: 600,
+
     score: 0
   };
 
 
   document.getElementById(
     'runPanel'
-  ).style.display = 'block';
+  ).style.display =
+    'block';
 
 
   updateRunUI();
@@ -1161,19 +1309,24 @@ function startRun() {
 
   document.getElementById(
     'runTime'
-  ).textContent = '10:00';
+  ).textContent =
+    '10:00';
 
 
   timer =
     setInterval(() => {
 
-      if (!state.run) return;
+      if (!state.run) {
+        return;
+      }
 
 
       state.run.time--;
 
 
-      if (state.run.time <= 0) {
+      if (
+        state.run.time <= 0
+      ) {
 
         endRun();
 
@@ -1198,7 +1351,9 @@ function startRun() {
 
 function updateRunUI() {
 
-  if (!state.run) return;
+  if (!state.run) {
+    return;
+  }
 
 
   const list =
@@ -1210,34 +1365,38 @@ function updateRunUI() {
   list.innerHTML = '';
 
 
-  state.run.objs.forEach(o => {
+  state.run.objs.forEach(
+    o => {
 
-    const d =
-      document.createElement(
-        'div'
-      );
-
-
-    d.className =
-      'run-item ' +
-      (
-        state.run.done.has(o.id)
-          ? 'done'
-          : ''
-      );
+      const d =
+        document.createElement(
+          'div'
+        );
 
 
-    d.innerHTML =
-      `<span>${o.label}</span>
-       <span>${
-         state.run.done.has(o.id)
-           ? '✓'
-           : '○'
-       }</span>`;
+      d.className =
+        'run-item ' +
+        (
+          state.run.done.has(
+            o.id
+          )
+            ? 'done'
+            : ''
+        );
 
 
-    list.appendChild(d);
-  });
+      d.innerHTML =
+        `<span>${o.label}</span>
+         <span>${
+           state.run.done.has(o.id)
+             ? '✓'
+             : '○'
+         }</span>`;
+
+
+      list.appendChild(d);
+    }
+  );
 
 
   document.getElementById(
@@ -1268,7 +1427,8 @@ function endRun(win = false) {
 
   document.getElementById(
     'runPanel'
-  ).style.display = 'none';
+  ).style.display =
+    'none';
 
 
   if (win) {
@@ -1283,6 +1443,6 @@ function endRun(win = false) {
 }
 
 </script>
-  
+
 </body>
 </html>
