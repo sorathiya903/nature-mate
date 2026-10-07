@@ -121,22 +121,17 @@ video{width:100%;height:100%;object-fit:cover;display:block}
 </div></div>
 
 <script type="module">
-
 console.log("TEST START");
 
 try {
-
-  const transformers = await import(
-    "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.4/dist/transformers.min.js"
+  const x = await import(
+    "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.4/dist/transformers.min.js?x=123"
   );
 
-  console.log("✅ TRANSFORMERS LOADED");
-  console.log(transformers);
+  console.log("✅ LOADED", x);
 
 } catch (e) {
-
-  console.error("❌ IMPORT FAILED");
-  console.error(e);
+  console.error("❌ FAILED", e);
 }
 
 </script>
