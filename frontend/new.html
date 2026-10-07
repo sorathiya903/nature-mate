@@ -1,282 +1,382 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Touch Grass Challenge Game</title>
-    <style>
-        :root {
-            --primary: #2e7d32;
-            --background: #f4f7f6;
-            --card-bg: #ffffff;
-            --text: #2c3e50;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            text-align: center;
-            background: var(--background);
-            color: var(--text);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-        }
-
-        .container {
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-            max-width: 450px;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        h1 { margin-top: 0; font-size: 24px; color: var(--primary); }
-
-        /* Progress Step Styling */
-        #loading-screen { width: 100%; margin: 20px 0; }
-        
-        .progress-container {
-            width: 100%;
-            background-color: #e0e0e0;
-            border-radius: 10px;
-            overflow: hidden;
-            margin: 15px 0;
-        }
-
-        .progress-bar {
-            height: 12px;
-            width: 0%;
-            background-color: var(--primary);
-            transition: width 0.1s linear;
-        }
-
-        #data-counter { font-size: 14px; color: #666; font-weight: 500; }
-
-        /* Elegant Circular Camera View (Initially Hidden) */
-        #game-screen { display: none; width: 100%; }
-
-        .camera-wrapper {
-            width: 260px;
-            height: 260px;
-            border-radius: 50%;
-            overflow: hidden;
-            margin: 20px auto;
-            border: 6px solid var(--primary);
-            box-shadow: 0 8px 24px rgba(46, 125, 50, 0.2);
-            position: relative;
-            background: #000;
-        }
-
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        #task-box {
-            background: #e8f5e9;
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 16px;
-            margin: 15px 0;
-            border-left: 5px solid var(--primary);
-        }
-
-        .btn {
-            padding: 14px 28px;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 30px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
-            transition: all 0.2s ease;
-            width: 80%;
-        }
-        .btn:active { transform: scale(0.98); }
-
-        #status-message {
-            margin-top: 15px;
-            font-size: 15px;
-            font-weight: 500;
-            color: #555;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Context Shift — Touch Grass</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--forest:#1a2e1a;--moss:#2d4a22;--lime:#c6f17a;--sage:#e8f0d8;--paper:#fdfcf6;--ink:#121b10;--mut: #6b7f62;--card:#ffffff;--line:#dde8d2;--fail:#ff6b5a;--ok:#2ed573}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Plus Jakarta Sans',system-ui;background:var(--paper);color:var(--ink);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+h1,h2{font-family:'Fraunces',serif;letter-spacing:-.03em}
+button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#loading{position:fixed;inset:0;z-index:100;background:radial-gradient(120% 120% at 20% 20%, #2d4a22, #0f1a0e);color:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center}
+.load-logo{font-size:48px;font-weight:700;line-height:.9;letter-spacing:-.05em;margin-bottom:12px}
+.load-sub{opacity:.7;font-size:14px;letter-spacing:.18em;text-transform:uppercase;margin-bottom:40px}
+.progress-wrap{width:min(360px,90vw);background:rgba(255,255,255,.1);border-radius:999px;height:10px;overflow:hidden;margin:20px 0 12px}
+.progress-bar{height:100%;background:var(--lime);width:0%;transition:width.2s}
+.meta{font-size:12px;opacity:.6;font-variant-numeric:tabular-nums}
+.steps{margin-top:28px;text-align:left;width:min(360px,90vw)}
+.step{display:flex;gap:12px;align-items:center;padding:8px 0;font-size:14px;opacity:.35;transition:.3s}
+.step.on{opacity:1}.step.done{opacity:.8}.step b{width:22px;height:22px;border-radius:999px;border:1px solid rgba(255,255,255,.3);display:grid;place-items:center;font-size:12px}
+.step.done b{background:var(--lime);color:#000;border-color:var(--lime)}
+#app{display:none;min-height:100dvh}
+.topbar{position:sticky;top:0;z-index:10;background:rgba(253,252,246,.9);backdrop-filter:blur(18px);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;padding:12px 18px}
+.stat{display:flex;gap:14px;align-items:center}
+.pill{background:var(--ink);color:var(--paper);padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;display:flex;gap:6px;align-items:center}
+.xp-bar{width:90px;height:6px;background:var(--line);border-radius:999px;overflow:hidden}
+.xp-fill{height:100%;background:var(--moss)}
+.main{padding:18px;max-width:520px;margin:0 auto;padding-bottom:120px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:0 12px 32px rgba(26,46,26,.06)}
+.quest-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.diff{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+.reward{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.tag{background:var(--sage);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700}
+.camera-wrap{position:relative;border-radius:28px;overflow:hidden;background:#000;aspect-ratio:3/4; margin-top:16px}
+video{width:100%;height:100%;object-fit:cover;display:block}
+.overlay{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 2px rgba(255,255,255,.2)}
+.scan{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:68%;aspect-ratio:1;border:2px dashed rgba(255,255,255,.6);border-radius:24px}
+.btn{border-radius:999px;padding:16px 22px;font-weight:800;letter-spacing:-.01em;border:0;transition:.15s;display:flex;align-items:center;justify-content:center;gap:10px;width:100%}
+.btn-primary{background:var(--ink);color:var(--paper);font-size:17px;box-shadow:0 10px 24px rgba(0,0,0,.2)}
+.btn-primary:active{transform:scale(.98)}.btn:disabled{opacity:.4;pointer-events:none}
+.btn-ghost{background:var(--paper);border:1px solid var(--line)}
+.foot{position:fixed;bottom:0;left:0;right:0;background:rgba(253,252,246,.92);backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:14px 18px;display:flex;gap:12px;max-width:520px;margin:0 auto}
+.result{position:fixed;inset:0;z-index:20;display:none;place-items:center;padding:24px;background:rgba(12,20,10,.7);backdrop-filter:blur(10px)}
+.result.on{display:grid}
+.result-card{background:var(--paper);border-radius:28px;padding:28px;width:min(420px,92vw);text-align:center;animation:pop.4s cubic-bezier(.175,.885,.32,1.275)}
+@keyframes pop{from{transform:scale(.85) translateY(20px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.conf{font-size:44px;font-weight:800;letter-spacing:-.05em;margin:8px 0}
+.canvas-preview{width:100%;border-radius:18px;margin:12px 0;background:#000;aspect-ratio:4/3;object-fit:cover}
+.run-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.run-item{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:10px 12px;font-size:13px;display:flex;justify-content:space-between;align-items:center}
+.run-item.done{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.small{font-size:12px;color:var(--mut);line-height:1.5;margin-top:8px}
+</style>
 </head>
 <body>
+<div id="loading">
+  <div class="load-logo">🌿 NatureMate</div>
+  <div class="load-sub">Touch Grass Edition</div>
+  <div style="font-size:15px;max-width:320px;line-height:1.4">Preparing your real-world adventure… Your captured image is analyzed locally on this device. No upload.</div>
+  <div class="progress-wrap"><div id="bar" class="progress-bar"></div></div>
+  <div id="meta" class="meta">0.00 MB / 0.00 MB — Loading AI engine…</div>
+  <div class="steps">
+    <div id="s1" class="step on"><b>1</b><span>Loading AI engine</span></div>
+    <div id="s2" class="step"><b>2</b><span>Downloading vision model</span></div>
+    <div id="s3" class="step"><b>3</b><span>Caching model files</span></div>
+    <div id="s4" class="step"><b>4</b><span>Preparing camera</span></div>
+    <div id="s5" class="step"><b>5</b><span>Adventure ready</span></div>
+  </div>
+</div>
 
-    <div class="container">
-        <h1>🌿 Context Shift</h1>
-
-        <!-- Setup Step: Loading & Progress -->
-        <div id="loading-screen">
-            <p id="step-title">Initializing Game Systems...</p>
-            <div class="progress-container">
-                <div id="bar" class="progress-bar"></div>
-            </div>
-            <p id="data-counter">0.00 MB / ~30 MB (0%)</p>
-        </div>
-
-        <!-- Gameplay Step: Camera Flow -->
-        <div id="game-screen">
-            <div id="task-box">Loading your quest...</div>
-            <div class="camera-wrapper">
-                <video id="webcam" autoplay playsinline></video>
-            </div>
-            <button class="btn" id="capture-btn">📸 Capture & Verify</button>
-            <p id="status-message">Scan your surroundings!</p>
-        </div>
+<div id="app">
+  <div class="topbar">
+    <div style="font-family:Fraunces;font-weight:700">🌿 CS</div>
+    <div class="stat">
+      <div class="pill"><span id="level">Lvl 1</span><div class="xp-bar"><div id="xpFill" class="xp-fill" style="width:10%"></div></div></div>
+      <div class="pill">🔥 <span id="streak">0</span></div>
+      <div class="pill">🌱 <span id="coins">0</span></div>
     </div>
+  </div>
+  <div class="main">
+    <div class="card">
+      <div class="quest-head"><span class="diff" id="qDiff">Difficulty ★☆☆☆☆</span><span class="diff" id="qType">OBJECT</span></div>
+      <h2 id="qTitle" style="font-size:28px;line-height:.95;margin-bottom:8px">Find a BENCH outside.</h2>
+      <p id="qDesc" class="small" style="font-size:14px;color:var(--mut)">Go outside, point your camera at the target, then capture.</p>
+      <div class="reward"><div class="tag" id="rXp">+50 XP</div><div class="tag" id="rCoin">+10 🌱</div><div id="qExtra" class="tag" style="display:none"></div></div>
+    </div>
+    <div class="camera-wrap">
+      <video id="video" autoplay playsinline muted></video>
+      <div class="overlay"><div class="scan"></div></div>
+    </div>
+    <p class="small" style="text-align:center;margin:12px 0">Camera is preview only. AI runs only after you press Capture & Verify.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+      <button id="modeBtn" class="btn btn-ghost">🏃 Touch Grass Run</button>
+      <button id="skipBtn" class="btn btn-ghost">Skip →</button>
+    </div>
+    <div id="runPanel" style="display:none" class="card" >
+      <h3>🏃 TOUCH GRASS RUN — 10:00</h3>
+      <div style="display:flex;gap:12px;margin:10px 0;font-weight:700"><span id="runTime">10:00</span><span id="runScore">0 done</span></div>
+      <div id="runList" class="run-grid"></div>
+      <button id="endRun" class="btn btn-ghost" style="margin-top:12px">End Run</button>
+    </div>
+  </div>
+  <div class="foot">
+    <button id="capture" class="btn btn-primary">📸 Capture & Verify</button>
+  </div>
+</div>
 
-    <script type="module">
-        import { pipeline } from 'https://jsdelivr.net';
+<div id="res" class="result"><div class="result-card">
+  <div id="resIcon" style="font-size:48px">🎉</div>
+  <h2 id="resTitle">QUEST COMPLETE</h2>
+  <img id="capImg" class="canvas-preview">
+  <div id="resDetail" style="font-weight:700;margin:6px 0">Bench detected</div>
+  <div id="resConf" class="conf">87%</div>
+  <div id="resRewards" class="small"></div>
+  <button id="nextBtn" class="btn btn-primary" style="margin-top:14px">Next Quest →</button>
+  <p class="small">Image analyzed locally. Not uploaded.</p>
+</div></div>
 
-        const loadingScreen = document.getElementById('loading-screen');
-        const gameScreen = document.getElementById('game-screen');
-        const stepTitle = document.getElementById('step-title');
-        const progressBar = document.getElementById('bar');
-        const dataCounter = document.getElementById('data-counter');
-        const taskBox = document.getElementById('task-box');
-        const video = document.getElementById('webcam');
-        const captureBtn = document.getElementById('capture-btn');
-        const statusMessage = document.getElementById('status-message');
+<script type="module">
+import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.4/dist/transformers.min.js';
+env.allowLocalModels = false; env.allowRemoteModels = true;
+env.backends.onnx.wasm.numThreads = 1;
 
-        let detectorInstance = null;
-        let currentTarget = "";
-        
-        // Dynamic target selection pool 
-        const taskPool = ["tree", "banner", "street light", "car", "bench", "bicycle"];
-        // Tracking metrics for individual file chunks fetched via HuggingFace
-        const fileSizes = {}; 
-
-        // 1. Core Download Engine with Live MB Progress Tracking
-        async function loadModel() {
-            stepTitle.innerText = "Downloading Local Computer Vision Model...";
-
-            try {
-                // Initializing a fast, lightweight 30MB Object detection model
-                detectorInstance = await pipeline('zero-shot-object-detection', 'Xenova/resnet-50_computervision_attack', {
-                    progress_callback: (data) => {
-                        if (data.status === 'progress') {
-                            // Save file chunks to calculate total megabytes downloaded
-                            fileSizes[data.file] = { 
-                                loaded: data.loaded || 0, 
-                                total: data.total || 0 
-                            };
-                            
-                            let totalLoadedBytes = 0;
-                            let totalFileBytes = 0;
-
-                            for (const file in fileSizes) {
-                                totalLoadedBytes += fileSizes[file].loaded;
-                                totalFileBytes += fileSizes[file].total;
-                            }
-
-                            // Convert values safely to MB metrics
-                            const loadedMB = (totalLoadedBytes / (1024 * 1024)).toFixed(2);
-                            const totalMB = (totalFileBytes / (1024 * 1024)).toFixed(2);
-                            const percentage = data.progress ? Math.round(data.progress) : 0;
-
-                            progressBar.style.width = `${percentage}%`;
-                            dataCounter.innerText = `${loadedMB} MB / ~${totalMB} MB (${percentage}%)`;
-                        }
-                        if (data.status === 'ready') {
-                            progressBar.style.width = '100%';
-                            dataCounter.innerText = "Assets cached and ready!";
-                        }
-                    }
-                });
-
-                // Move directly to verification step
-                requestCameraAccess();
-
-            } catch (error) {
-                console.error(error);
-                stepTitle.innerText = "Error loading model. Check internet connectivity.";
-            }
-        }
-
-        // 2. Sequential Access Step: Requesting camera hardware permissions
-        async function requestCameraAccess() {
-            stepTitle.innerText = "Opening camera array...";
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment', width: 400, height: 400 }, 
-                    audio: false 
-                });
-                video.srcObject = stream;
-                
-                // Switch interface directly to live game screen
-                loadingScreen.style.display = 'none';
-                gameScreen.style.display = 'block';
-                generateRandomTask();
-
-            } catch (err) {
-                alert("Camera access is mandatory to play this physical location puzzle game!");
-                stepTitle.innerText = "Camera Permission Denied.";
-            }
-        }
-
-        // 3. Selection Gameplay Rule
-        function generateRandomTask() {
-            const randomIndex = Math.floor(Math.random() * taskPool.length);
-            currentTarget = taskPool[randomIndex];
-            taskBox.innerHTML = `Current Objective: Find a <strong>${currentTarget.toUpperCase()}</strong> outside!`;
-            statusMessage.innerText = "Point your lens directly at it.";
-            statusMessage.style.color = "var(--text)";
-        }
-
-        // 4. Verification engine using internal canvas snapshots
-        captureBtn.addEventListener('click', async () => {
-            statusMessage.innerText = "Local AI scanning pixels...";
-            statusMessage.style.color = "#d97706";
-
-            // Snap active context frame directly from raw video track
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth || 300;
-            canvas.height = video.videoHeight || 300;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imageBlobUrl = canvas.toDataURL('image/jpeg');
-
-            try {
-                // Pass candidates list straight to local neural engine
-                const predictions = await detectorInstance(imageBlobUrl, taskPool);
-                console.log("AI Arrays:", predictions);
-
-                // Check if target is present with confidence exceeding 45%
-                const match = predictions.find(item => item.label === currentTarget && item.score > 0.45);
-
-                if (match) {
-                    statusMessage.innerText = `🎉 Target Confirmed! You Won! (${Math.round(match.score * 100)}% match)`;
-                    statusMessage.style.color = "var(--primary)";
-                    
-
-// Proceed to next level after 3 seconds
-setTimeout(() => {
-generateRandomTask();
-}, 3500);
-} else {
-statusMessage.innerText = ❌ No ${currentTarget} detected here. Try matching angles or lighting!;
-statusMessage.style.color = "#dc2626";
+const bar=document.getElementById('bar'), meta=document.getElementById('meta');
+const steps=[document.getElementById('s1'),document.getElementById('s2'),document.getElementById('s3'),document.getElementById('s4'),document.getElementById('s5')];
+let totalBytes=0, loadedBytes=0, fileMap=new Map();
+function setStep(n){
+  steps.forEach((s,i)=>{s.classList.toggle('on', i===n); if(i<n) s.classList.add('done');});
+  if(n===1) steps[0].querySelector('b').textContent='✓';
 }
-} catch (err) {
-console.error(err);
-statusMessage.innerText = "Processing pipeline exception occurred.";
+setStep(0);
+
+let detector=null;
+async function loadModel(){
+ setStep(1); meta.textContent='Loading AI engine…';
+ try{
+  detector = await pipeline('zero-shot-object-detection','Xenova/owlvit-base-patch32',{
+    progress_callback:(p)=>{
+      if(p.status==='progress'){
+        if(!fileMap.has(p.file)){ fileMap.set(p.file, p.total||0); }
+        // update loaded estimate
+        let loaded=0,total=0;
+        fileMap.forEach((t,f)=>{
+          if(f===p.file){ loaded+=p.loaded||0; total+=p.total||p.loaded||0; }
+          else { /* we don't know per file progress, keep total */ }
+        });
+        // Better: sum from p if available
+        if(p.total){ totalBytes = Math.max(totalBytes, p.total); }
+        loadedBytes = p.loaded;
+        const mbL=(p.loaded/1024/1024).toFixed(2), mbT=((p.total||145*1024*1024)/1024/1024).toFixed(2);
+        const pct=Math.min(99, Math.round((p.loaded/(p.total||1))*100));
+        bar.style.width=pct+'%';
+        meta.textContent=`${mbL} MB / ${mbT} MB — Downloading ${p.file.split('/').pop()}…`;
+        setStep(1);
+        if(p.file.includes('model')){ setStep(2); steps[1].classList.add('done'); }
+      }
+      if(p.status==='done'){ bar.style.width='100%'; }
+    }
+  });
+  setStep(2); steps[1].querySelector('b').textContent='✓'; steps[2].querySelector('b').textContent='✓';
+  meta.textContent='✓ AI model ready — caching complete';
+ }catch(e){
+  meta.textContent='Model load failed: '+e.message+' — trying fallback yolos-tiny';
+  // Fallback to smaller model if owlvit fails
+  detector = await pipeline('object-detection','Xenova/yolos-tiny',{
+    progress_callback:(p)=>{ if(p.status==='progress'){ bar.style.width=Math.round(p.progress||0)+'%'; meta.textContent=`Downloading fallback… ${Math.round(p.progress||0)}%`; }}
+  });
+ }
+ setStep(3);
 }
+
+// Game Data - only targets that model can verify via text queries
+const OBJECTS=[
+  {id:'bench', label:'bench', queries:['a bench','a park bench'], diff:1, reward:50, coins:10},
+  {id:'bicycle', label:'bicycle', queries:['a bicycle','a bike'], diff:1, reward:50, coins:10},
+  {id:'car', label:'car', queries:['a car','a parked car'], diff:1, reward:50, coins:10},
+  {id:'person', label:'person', queries:['a person','a human'], diff:1, reward:50, coins:10},
+  {id:'dog', label:'dog', queries:['a dog'], diff:1, reward:55, coins:12},
+  {id:'chair', label:'chair', queries:['a chair'], diff:1, reward:50, coins:10},
+  {id:'bottle', label:'bottle', queries:['a bottle','a water bottle'], diff:2, reward:65, coins:15},
+  {id:'potted plant', label:'plant', queries:['a plant','a potted plant','a tree'], diff:2, reward:75, coins:18, aliases:['tree']},
+  {id:'bus', label:'bus', queries:['a bus'], diff:2, reward:70, coins:15},
+  {id:'truck', label:'truck', queries:['a truck','a large vehicle'], diff:2, reward:70, coins:15},
+];
+
+let state={level:1,xp:0,xpNeed:200,coins:0,streak:0,missions:0,run:null, quest:null, seq:0};
+
+function xpForNext(l){ return 180 + l*60; }
+function genQuest(){
+  const lvl=state.level;
+  const pool = OBJECTS.filter(o=> lvl>=3 || o.diff<=2 );
+  let type='object';
+  if(lvl>=3 && Math.random()<0.5) type='combination';
+  if(lvl>=4 && state.seq>0) type='sequence';
+
+  if(type==='object'){
+    const o=pool[Math.floor(Math.random()*pool.length)];
+    return {type:'object', target:o, secondary:null, diff:o.diff, reward:o.reward, desc:`Find a ${o.label.toUpperCase()} outside.`};
+  } else if(type==='combination'){
+    const a=pool[Math.floor(Math.random()*pool.length)];
+    let b=pool[Math.floor(Math.random()*pool.length)];
+    while(b.id===a.id) b=pool[Math.floor(Math.random()*pool.length)];
+    return {type:'combination', target:a, secondary:b, relationship:'near', diff:3, reward:100, desc:`Find a ${a.label.toUpperCase()} with a ${b.label.toUpperCase()} nearby. One photo must contain both.`};
+  } else {
+    // sequence
+    const a=pool[Math.floor(Math.random()*pool.length)];
+    let b=pool[Math.floor(Math.random()*pool.length)];
+    while(b.id===a.id) b=pool[Math.floor(Math.random()*pool.length)];
+    return {type:'sequence', target:a, secondary:b, steps:2, diff:4, reward:140, desc:`MISSION: 1) Find a ${a.label.toUpperCase()} → 2) Find a ${b.label.toUpperCase()}. Walk somewhere new between!`};
+  }
+}
+
+function renderQuest(){
+  const q=state.quest;
+  document.getElementById('qTitle').textContent=q.desc;
+  document.getElementById('qType').textContent=q.type.toUpperCase();
+  document.getElementById('qDiff').textContent='Difficulty ' + '★'.repeat(q.diff)+'☆'.repeat(4-q.diff);
+  document.getElementById('rXp').textContent='+'+q.reward+' XP';
+  document.getElementById('rCoin').textContent='+'+Math.round(q.reward/3)+' 🌱 Coins';
+  document.getElementById('qDesc').textContent = q.type==='combination'? 'Both objects must appear in the SAME captured photo.' : q.type==='sequence'? `Step ${state.seq+1} of 2 — complete current, then move.` : 'Go outside, frame it well, then capture.';
+}
+
+async function setupCamera(){
+ setStep(3);
+ try{
+  const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720}}, audio:false});
+  document.getElementById('video').srcObject=stream;
+  await document.getElementById('video').play();
+  setStep(4); steps[3].querySelector('b').textContent='✓';
+  setTimeout(()=>{ setStep(5); steps[4].querySelector('b').textContent='✓'; document.getElementById('loading').style.display='none'; document.getElementById('app').style.display='block'; },600);
+ }catch(e){
+  meta.textContent='Camera denied — you can still play but need camera for quests';
+  document.getElementById('loading').style.display='none'; document.getElementById('app').style.display='block';
+ }
+}
+
+await loadModel();
+await setupCamera();
+
+state.quest=genQuest(); renderQuest();
+function updateHud(){
+  document.getElementById('level').textContent='Lvl '+state.level;
+  document.getElementById('xpFill').style.width=Math.min(100, (state.xp/state.xpNeed*100))+'%';
+  document.getElementById('streak').textContent=state.streak;
+  document.getElementById('coins').textContent=state.coins;
+}
+updateHud();
+
+// Capture & Verify - THE ONLY PLACE INFERENCE HAPPENS
+const video=document.getElementById('video'), captureBtn=document.getElementById('capture'), canvas=document.createElement('canvas'), capImg=document.getElementById('capImg');
+let busy=false;
+captureBtn.addEventListener('click', async ()=>{
+ if(busy) return; busy=true; captureBtn.disabled=true; captureBtn.textContent='⏳ Analyzing locally…';
+ try{
+  const w=video.videoWidth||1280, h=video.videoHeight||720;
+  canvas.width=w; canvas.height=h;
+  const ctx=canvas.getContext('2d');
+  ctx.drawImage(video,0,0,w,h);
+  const dataUrl=canvas.toDataURL('image/jpeg',0.85);
+  capImg.src=dataUrl;
+
+  const q=state.quest;
+  const labels=[...q.target.queries];
+  if(q.secondary) labels.push(...q.secondary.queries);
+  // OWL-ViT zero-shot detection
+  const results = await detector(dataUrl, labels, {threshold:0.15, top_k:10});
+  console.log('detections', results);
+
+  let passed=false, best=null, secondBest=null;
+  const findFor=(queries)=>{
+    let bestMatch=null;
+    for(const r of results){
+      const lab=r.label.toLowerCase();
+      if(queries.some(q=>lab.includes(q.replace('a ','').trim()))){
+        if(!bestMatch || r.score>bestMatch.score) bestMatch=r;
+      }
+    }
+    return bestMatch;
+  };
+  best=findFor(q.target.queries);
+  if(q.secondary) secondBest=findFor(q.secondary.queries);
+
+  if(q.type==='object') passed = best && best.score>0.18;
+  if(q.type==='combination') passed = best && secondBest && best.score>0.15 && secondBest.score>0.15;
+  if(q.type==='sequence'){
+    // single step check
+    passed = best && best.score>0.18;
+  }
+
+  if(passed){
+    showSuccess(best, secondBest, q);
+  } else {
+    showFail(best, q, results);
+  }
+
+ }catch(err){
+  alert('Inference error: '+err.message);
+ }finally{
+  busy=false; captureBtn.disabled=false; captureBtn.textContent='📸 Capture & Verify';
+ }
 });
-// Initialize execution setup loop on boot
-loadModel();
 
+function showSuccess(best, second, q){
+  const res=document.getElementById('res');
+  document.getElementById('resIcon').textContent='🎉';
+  document.getElementById('resTitle').textContent='QUEST COMPLETE';
+  document.getElementById('resDetail').textContent = q.type==='combination'? `${q.target.label} + ${q.secondary.label} detected` : `${q.target.label} detected`;
+  document.getElementById('resConf').textContent = Math.round((best?.score||0)*100)+'%';
+  document.getElementById('resRewards').textContent = `+${q.reward} XP +${Math.round(q.reward/3)} 🌱 Coins ${q.type==='combination'?'• Combo bonus!':''}`;
+  res.classList.add('on');
+  state.xp+=q.reward; state.coins+=Math.round(q.reward/3); state.streak++; state.missions++;
+  if(state.run){ state.run.done.add(q.target.id); if(q.secondary) state.run.done.add(q.secondary.id); updateRunUI(); }
+  if(q.type==='sequence'){
+    state.seq++;
+    if(state.seq>=2){ state.seq=0; }
+    else {
+      // keep secondary as next
+      state.quest={type:'object', target:q.secondary, secondary:null, diff:q.secondary.diff, reward:80, desc:`Now find a ${q.secondary.label.toUpperCase()} elsewhere!`};
+      renderQuest();
+      if(state.xp>=state.xpNeed){ state.level++; state.xp=0; state.xpNeed=xpForNext(state.level); }
+      updateHud();
+      return;
+    }
+  }
+  if(state.xp>=state.xpNeed){ state.level++; state.xp=0; state.xpNeed=xpForNext(state.level); }
+  updateHud();
+}
+function showFail(best, q, all){
+  const res=document.getElementById('res');
+  document.getElementById('resIcon').textContent='❌';
+  document.getElementById('resTitle').textContent='QUEST NOT COMPLETED';
+  document.getElementById('resDetail').textContent = `I couldn't confidently find ${q.target.label} in this capture. ${all.length===0?'No objects detected — try better light.':`Saw ${all.slice(0,2).map(r=>r.label).join(', ')} instead.`}`;
+  document.getElementById('resConf').textContent = best? Math.round(best.score*100)+'%' : '—';
+  document.getElementById('resRewards').textContent='Tip: Move closer, improve lighting, point directly at object, avoid glare. Streak stays if you retry!';
+  res.classList.add('on');
+  state.streak=Math.max(0, state.streak-1); updateHud();
+}
+
+document.getElementById('nextBtn').addEventListener('click',()=>{
+  document.getElementById('res').classList.remove('on');
+  if(state.seq===0){ state.quest=genQuest(); }
+  renderQuest();
+});
+
+document.getElementById('skipBtn').addEventListener('click',()=>{
+  state.quest=genQuest(); state.streak=0; renderQuest(); updateHud();
+});
+
+// Touch Grass Run
+let timer=null;
+document.getElementById('modeBtn').addEventListener('click', startRun);
+document.getElementById('endRun').addEventListener('click', endRun);
+function startRun(){
+  const objs=[...OBJECTS].sort(()=>0.5-Math.random()).slice(0,6);
+  state.run={objs, done:new Set(), time:600, score:0};
+  document.getElementById('runPanel').style.display='block';
+  updateRunUI();
+  timer=setInterval(()=>{
+    state.run.time--; if(state.run.time<=0) endRun();
+    document.getElementById('runTime').textContent=Math.floor(state.run.time/60)+':'+String(state.run.time%60).padStart(2,'0');
+  },1000);
+}
+function updateRunUI(){
+  const list=document.getElementById('runList'); list.innerHTML='';
+  state.run.objs.forEach(o=>{
+    const d=document.createElement('div'); d.className='run-item '+(state.run.done.has(o.id)?'done':'');
+    d.innerHTML=`<span>${o.label}</span><span>${state.run.done.has(o.id)?'✓':'○'}</span>`;
+    list.appendChild(d);
+  });
+  document.getElementById('runScore').textContent=`${state.run.done.size}/${state.run.objs.length} done`;
+  if(state.run.done.size===state.run.objs.length){ endRun(true); }
+}
+function endRun(win=false){
+  clearInterval(timer);
+  document.getElementById('runPanel').style.display='none';
+  if(win) alert('🏃 Amazing Touch Grass Run! You found all targets!');
+  state.run=null;
+}
 </script>
 </body>
 </html>
