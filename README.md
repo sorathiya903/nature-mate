@@ -14,7 +14,7 @@ The goal isn’t to spend more time on the screen. It’s to give you a reason t
 
 ⸻
 
-✨ How It Works
+## ✨ How It Works
 
 1. Get a quest
     NatureMate gives you something to find outside.
@@ -31,43 +31,43 @@ The goal isn’t to spend more time on the screen. It’s to give you a reason t
 
 ⸻
 
-🌱 What’s Inside
+## 🌱 What’s Inside
 
 🔎 Outdoor Quests
 
 Find real-world objects using your camera.
 
-🤖 Browser AI
+### 🤖 Browser AI
 
 NatureMate uses object detection directly in the browser to recognize supported objects.
 
 The AI runs client-side, so the core game doesn’t require a custom backend for camera detection.
 
-❤️ 3 Lives
+### ❤️ 3 Lives
 
 You have three lives.
 
 Skipping a quest costs one life, while simply failing to detect the requested object does not.
 
-🔥 Streaks
+### 🔥 Streaks
 
 Keep completing quests to maintain your streak.
 
-⭐ XP & Coins
+### ⭐ XP & Coins
 
 Successful discoveries reward XP and coins as you progress.
 
-🚫 No Repeated Quests
+### 🚫 No Repeated Quests
 
 Once an object is successfully found or skipped, it won’t be selected again during that game.
 
-🏃 Touch Grass Run
+### 🏃 Touch Grass Run
 
 A separate 10-minute challenge mode where you try to complete a set of outdoor targets before time runs out.
 
 ⸻
 
-🧠 AI in the Browser
+### 🧠 AI in the Browser
 
 NatureMate uses Transformers.js with a browser-compatible YOLOS object-detection model.
 
@@ -89,7 +89,7 @@ No custom AI backend is required for the game’s object-detection workflow.
 
 ⸻
 
-📱 Built for Mobile
+## 📱 Built for Mobile
 
 NatureMate is designed primarily for phones because the camera is part of the gameplay.
 
@@ -103,7 +103,7 @@ Camera permissions are required for gameplay.
 
 ⸻
 
-🛠️ Tech Stack
+## 🛠️ Tech Stack
 
 * HTML
 * CSS
@@ -118,7 +118,7 @@ The project intentionally keeps the architecture lightweight and client-side.
 
 ⸻
 
-🚀 Run Locally
+## 🚀 Run Locally
 
 Clone the repository:
 ```
@@ -141,17 +141,18 @@ Camera access may require a secure context such as HTTPS or a local development 
 
 ⸻
 
-📂 Project
+## 📂 Project
 
 The main game is currently located in:
 
+```
 frontend/
 └── game.html
+```
 
+——
 
-⸻
-
-🎯 Why I Built It
+## 🎯 Why I Built It
 
 Most games are designed to keep you looking at the screen.
 
@@ -166,7 +167,7 @@ You should open it, get a quest, go outside, find something, complete it, and ke
 
 ⸻
 
-🔮 What’s Next
+## 🔮 What’s Next
 
 NatureMate is still evolving.
 
@@ -181,7 +182,7 @@ Possible future improvements include:
 
 ⸻
 
-🤝 Contributing
+## 🤝 Contributing
 
 Found a bug or have an interesting idea?
 
@@ -191,13 +192,13 @@ Suggestions for new game mechanics are especially welcome.
 
 ⸻
 
-📜 License
+## 📜 License
 
 See the repository’s license file for the current licensing terms.
 
 ⸻
 
-👨‍💻 Author
+## 👨‍💻 Author
 
 Aditya Sorathiya
 
