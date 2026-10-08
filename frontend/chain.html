@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NatureMate: Chain — One thing leads to another.</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--forest:#1a2e1a;--moss:#2d4a22;--lime:#c6f17a;--sage:#e8f0d8;--paper:#fdfcf6;--ink:#121b10;--mut:#6b7f62;--line:#dde8d2;--card:#fff;--ok:#2ed573;--fail:#ff6b5a}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Plus Jakarta Sans',system-ui;background:var(--paper);color:var(--ink);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+h1,h2{font-family:'Fraunces',serif;letter-spacing:-.04em}
+button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#loading{position:fixed;inset:0;z-index:100;background:radial-gradient(120% 120% at 20% 20%, #2d4a22, #0f1a0e);color:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center}
+.load-logo{font-size:42px;font-weight:800;letter-spacing:-.04em}
+.load-sub{opacity:.7;font-size:11px;letter-spacing:.18em;text-transform:uppercase;margin:8px 0 28px}
+.progress-wrap{width:min(360px,90vw);background:rgba(255,255,255,.12);border-radius:999px;height:10px;overflow:hidden;margin:16px 0 8px}
+.progress-bar{height:100%;background:var(--lime);width:0%;transition:width.2s}
+.meta{font-size:11px;opacity:.6}
+.steps{margin-top:18px;text-align:left;width:min(360px,90vw)}
+.step{display:flex;gap:10px;align-items:center;padding:6px 0;font-size:13px;opacity:.4;transition:.3s}
+.step.on{opacity:1}.step.done{opacity:.8}.step b{width:20px;height:20px;border-radius:999px;border:1px solid rgba(255,255,255,.3);display:grid;place-items:center;font-size:11px}
+.step.done b{background:var(--lime);color:#000;border-color:var(--lime)}
+#app{display:none;min-height:100dvh}
+.topbar{position:sticky;top:0;z-index:10;background:rgba(253,252,246,.92);backdrop-filter:blur(18px);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;padding:10px 14px}
+.brand{font-weight:800;font-family:Fraunces;display:flex;gap:8px;align-items:center}
+.stat{display:flex;gap:8px;align-items:center}
+.pill{background:var(--ink);color:var(--paper);padding:6px 12px;border-radius:999px;font-size:12px;font-weight:800;display:flex;gap:6px;align-items:center}
+.main{padding:14px;max-width:520px;margin:0 auto;padding-bottom:120px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:0 12px 32px rgba(26,46,26,.06);position:relative;overflow:hidden}
+.chain-count{font-family:Fraunces;font-size:36px;font-weight:900;letter-spacing:-.05em;line-height:.9}
+.emoji-big{font-size:54px;line-height:1;margin:8px 0}
+.current-label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);font-weight:800}
+.current-title{font-family:Fraunces;font-size:28px;font-weight:900;text-transform:uppercase}
+.camera-wrap{position:relative;border-radius:28px;overflow:hidden;background:#000;aspect-ratio:3/4;margin-top:14px;border:2px solid transparent;transition:border-color.3s}
+.camera-wrap.scanning{border-color:var(--lime)}
+.camera-wrap.success{border-color:var(--ok);animation:popCam.4s ease}
+.camera-wrap.fail{animation:shakeCam.4s ease;border-color:var(--fail)}
+@keyframes popCam{0%{transform:scale(1)}50%{transform:scale(1.02)}100%{transform:scale(1)}}
+@keyframes shakeCam{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+video{width:100%;height:100%;object-fit:cover;display:block}
+.overlay{position:absolute;inset:0;pointer-events:none}
+.scan{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:68%;aspect-ratio:1;border:2px dashed rgba(255,255,255,.6);border-radius:24px}
+.camera-wrap.scanning.scan{border-color:var(--lime);box-shadow:0 0 20px rgba(198,241,122,.4);border-style:solid}
+.scan-line{position:absolute;left:8%;right:8%;height:3px;background:linear-gradient(90deg,transparent,var(--lime),transparent);box-shadow:0 0 12px var(--lime);top:0;opacity:0}
+.camera-wrap.scanning.scan-line{opacity:1;animation:scanMove 1.8s ease-in-out infinite}
+@keyframes scanMove{0%{top:8%}50%{top:92%}100%{top:8%}}
+.scan-status{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;display:none;white-space:nowrap}
+.camera-wrap.scanning.scan-status{display:block}
+.check{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(0);width:70px;height:70px;background:var(--ok);border-radius:50%;display:grid;place-items:center;color:#fff;font-size:34px;font-weight:900;transition:transform.4s cubic-bezier(.34,1.56,.64,1)}
+.camera-wrap.success.check{transform:translate(-50%,-50%) scale(1)}
+.btn{border-radius:999px;padding:14px 20px;font-weight:800;border:0;transition:transform.12s,opacity.2s;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--ink);color:var(--paper);box-shadow:0 10px 24px rgba(0,0,0,.18)}
+.btn-ghost{background:var(--paper);border:1px solid var(--line);color:var(--ink)}
+.btn:disabled{opacity:.45;pointer-events:none}
+.foot{position:fixed;bottom:0;left:0;right:0;background:rgba(253,252,246,.94);backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:10px 14px;display:flex;gap:8px;max-width:520px;margin:0 auto;z-index:8}
+.hint-box{margin-top:12px;background:var(--sage);border-radius:16px;padding:12px 14px;font-size:13px;font-weight:700;display:none}
+.hint-box.on{display:block;animation:pop.3s ease}
+.chain-strip{margin-top:14px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+.chain-strip::-webkit-scrollbar{display:none}
+.chain-node{min-width:56px;height:56px;border-radius:16px;background:var(--paper);border:1px solid var(--line);display:grid;place-items:center;font-size:22px;font-weight:800;flex-shrink:0;position:relative}
+.chain-node.active{background:var(--forest);color:var(--lime);border-color:var(--forest);box-shadow:0 0 0 3px var(--sage)}
+.chain-node span{font-size:10px;position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);white-space:nowrap;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.arrow{width:20px;display:grid;place-items:center;color:var(--mut);flex-shrink:0;font-weight:900}
+.result{position:fixed;inset:0;z-index:20;display:none;place-items:center;padding:20px;background:rgba(12,20,10,.72);backdrop-filter:blur(12px)}
+.result.on{display:grid}
+.result-card{background:var(--paper);border-radius:28px;padding:24px;width:min(420px,92vw);text-align:center;animation:pop.4s cubic-bezier(.175,.885,.32,1.275)}
+@keyframes pop{from{transform:scale(.86) translateY(16px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.conf{font-size:40px;font-weight:900;letter-spacing:-.05em;margin:6px 0}
+.float{position:absolute;left:50%;top:54px;transform:translateX(-50%);background:var(--lime);color:var(--forest);padding:6px 12px;border-radius:999px;font-weight:900;font-size:13px;animation:floatUp.9s ease forwards;pointer-events:none;z-index:5}
+@keyframes floatUp{0%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-28px)}}
+.toast-c{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:30;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:var(--ink);color:var(--paper);padding:10px 14px;border-radius:999px;font-size:13px;font-weight:800;box-shadow:0 8px 20px rgba(0,0,0,.2);animation:tin.3s ease,tout.3s ease 2.2s forwards}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes tout{from{opacity:1}to{opacity:0;transform:translateY(-8px)}}
+.small{font-size:12px;color:var(--mut);line-height:1.5}
+</style>
+</head>
+<body>
+<div id="loading">
+  <div class="load-logo">🔗 NatureMate: Chain</div>
+  <div class="load-sub">One thing leads to another.</div>
+  <div class="progress-wrap"><div id="bar" class="progress-bar"></div></div>
+  <div id="meta" class="meta">Loading AI — cached locally after first download</div>
+  <div class="steps">
+    <div id="s1" class="step on"><b>1</b><span>Loading Transformers.js</span></div>
+    <div id="s2" class="step"><b>2</b><span>Checking cached vision model</span></div>
+    <div id="s3" class="step"><b>3</b><span>Preparing camera</span></div>
+    <div id="s4" class="step"><b>4</b><span>Chain ready</span></div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <div class="brand"><a href="./game.html" style="opacity:.6">←</a> 🔗 CHAIN</div>
+    <div class="stat">
+      <button id="saveBtn" class="pill" style="border:0">💾 Save</button>
+      <button id="quitBtn" class="pill" style="border:0;background:var(--paper);color:var(--ink);border:1px solid var(--line)">✕ Quit</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="card" id="mainCard">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><div class="chain-count" id="chainCount">🔥 CHAIN 0</div><div class="small" id="xpCount">0 XP • Chain your world</div></div>
+        <div style="text-align:right"><div class="current-label">Mistakes</div><div id="mistakePills" style="display:flex;gap:4px;justify-content:flex-end;margin-top:4px"></div></div>
+      </div>
+      <div style="margin-top:14px;text-align:center">
+        <div class="current-label">Current Object</div>
+        <div class="emoji-big" id="curEmoji">🌳</div>
+        <div class="current-title" id="curTitle">TREE</div>
+        <p class="small" id="curHint" style="margin-top:6px">Think about what you'd commonly see with a tree.</p>
+      </div>
+      <div class="hint-box" id="hintBox"></div>
+    </div>
+
+    <div class="camera-wrap" id="camWrap">
+      <video id="video" autoplay playsinline muted></video>
+      <div class="overlay"><div class="scan"><div class="scan-line"></div></div><div class="scan-status" id="scanStatus">SCANNING...</div><div class="check" id="check">✓</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <button id="hintBtn" class="btn btn-ghost">💡 Hint — 3 left</button>
+      <button id="capture" class="btn btn-primary">📷 Capture</button>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="current-label">Your Chain — How long can you keep it going?</div>
+      <div class="chain-strip" id="chainStrip"></div>
+    </div>
+  </div>
+  <div class="foot">
+    <button id="newBtn" class="btn btn-ghost" style="flex:1">↺ New Chain</button>
+    <button id="continueBtn" class="btn btn-primary" style="flex:1">▶ Continue Chain</button>
+  </div>
+</div>
+
+<div id="res" class="result"><div class="result-card">
+  <div id="resIcon" style="font-size:48px">✨</div>
+  <h2 id="resTitle" style="font-family:Fraunces">CHAIN CONTINUES!</h2>
+  <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0"><span id="fromEmoji" style="font-size:28px"></span><span>→</span><span id="toEmoji" style="font-size:32px"></span></div>
+  <div id="resDetail" style="font-weight:800"></div>
+  <div id="resConf" class="conf"></div>
+  <div id="resRewards" class="small"></div>
+  <button id="nextChain" class="btn btn-primary" style="margin-top:12px">Next Link →</button>
+</div></div>
+
+<div id="wrongRes" class="result"><div class="result-card">
+  <div style="font-size:48px">🔗</div>
+  <h2 style="font-family:Fraunces">Not connected!</h2>
+  <p class="small" id="wrongDetail" style="margin:10px 0"></p>
+  <div class="small" id="wrongMistake"></div>
+  <button id="wrongOk" class="btn btn-primary" style="margin-top:12px">Try again</button>
+</div></div>
+
+<div id="broken" class="result"><div class="result-card">
+  <div style="font-size:56px">💔</div>
+  <h2 style="font-family:Fraunces">🔗 Chain Broken</h2>
+  <div class="card" style="box-shadow:none;margin:12px 0">
+    <div style="font-size:24px;font-weight:900"><span id="bLen">0</span> links</div>
+    <div class="small"><span id="bXp">0 XP</span> • <span id="bBest">—</span></div>
+  </div>
+  <div style="display:grid;gap:8px">
+    <button id="playAgain" class="btn btn-primary">🔄 Play Again</button>
+    <button id="saveFromBroken" class="btn btn-ghost">💾 Save Chain</button>
+    <button id="quitFromBroken" class="btn btn-ghost">✕ Quit to Menu</button>
+  </div>
+</div></div>
+
+<div id="quitModal" class="result"><div class="result-card">
+  <h2 style="font-family:Fraunces">Quit this chain?</h2>
+  <p class="small" style="margin:10px 0">Your current progress will be lost unless you save it.</p>
+  <div style="display:grid;gap:8px;margin-top:12px">
+    <button id="qContinue" class="btn btn-ghost">Continue Playing</button>
+    <button id="qSaveQuit" class="btn btn-primary">💾 Save & Quit</button>
+    <button id="qQuit" class="btn btn-ghost" style="color:var(--fail)">Quit without saving</button>
+  </div>
+</div></div>
+
+<div id="savedModal" class="result"><div class="result-card">
+  <div style="font-size:48px">💾</div>
+  <h2 style="font-family:Fraunces">Saved Game Found</h2>
+  <div class="card" style="box-shadow:none;margin:12px 0;text-align:left">
+    <div style="display:flex;justify-content:space-between"><span class="small">CHAIN LENGTH</span><b id="sLen">0</b></div>
+    <div style="display:flex;justify-content:space-between"><span class="small">XP</span><b id="sXp">0</b></div>
+    <div style="display:flex;justify-content:space-between"><span class="small">CURRENT</span><b id="sCur">—</b></div>
+    <div style="display:flex;justify-content:space-between"><span class="small">LAST PLAYED</span><b id="sTime">Today</b></div>
+  </div>
+  <div style="display:grid;gap:8px">
+    <button id="sContinue" class="btn btn-primary">▶ Continue</button>
+    <button id="sNew" class="btn btn-ghost">↺ New Game</button>
+  </div>
+</div></div>
+
+<div class="toast-c" id="toasts"></div>
+
+<script type="module">
+const bar=document.getElementById('bar'),meta=document.getElementById('meta');
+const stepEls=[document.getElementById('s1'),document.getElementById('s2'),document.getElementById('s3'),document.getElementById('s4')];
+function setStep(n){stepEls.forEach((s,i)=>{s.classList.toggle('on',i===n);if(i<n){s.classList.add('done');s.querySelector('b').textContent='✓';}});}
+function markAllDone(){stepEls.forEach(s=>{s.classList.add('done');s.classList.remove('on');s.querySelector('b').textContent='✓';});}
+
+let pipeline,env;
+try{const t=await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1");pipeline=t.pipeline;env=t.env;}catch(e){console.error(e);meta.textContent="AI library failed";throw e;}
+env.allowLocalModels=false;env.allowRemoteModels=true;
+if(env.backends?.onnx?.wasm)env.backends.onnx.wasm.numThreads=1;
+env.cacheDir="./.cache";
+let detector=null;
+function handleProgress(p){
+ if(p.status!=='progress')return;
+ let percent=0;if(typeof p.progress==='number')percent=p.progress;else if(p.loaded&&p.total)percent=(p.loaded/p.total)*100;
+ percent=Math.max(0,Math.min(100,percent));bar.style.width=percent+'%';
+ const loaded=p.loaded?(p.loaded/1024/1024).toFixed(2):'0.00';const total=p.total?(p.total/1024/1024).toFixed(2):'—';
+ const f=p.file?p.file.split('/').pop():'model';
+ meta.textContent=`${loaded} MB / ${total} MB — ${f} — cached locally after first download`;
+ setStep(1);
+}
+async function loadModel(){
+ setStep(0);meta.textContent="Checking cache — using cached model if present, otherwise downloading...";
+ try{
+  detector=await pipeline("object-detection","Xenova/yolos-tiny",{dtype:"q8",progress_callback:handleProgress});
+  bar.style.width='100%';meta.textContent="✓ AI ready (cached)";
+  stepEls[1].classList.add('done');stepEls[1].querySelector('b').textContent='✓';
+ }catch(e){console.error(e);meta.textContent="Model failed";throw e;}
+}
+
+const EMOJI={
+"bench":"🪑","bicycle":"🚲","car":"🚗","person":"👤","dog":"🐕","chair":"🪑","bottle":"🥤","potted plant":"🪴","bus":"🚌","truck":"🚚","motorcycle":"🏍️","bird":"🐦","cat":"🐈","horse":"🐴","backpack":"🎒","umbrella":"☂️","handbag":"👜","suitcase":"🧳","frisbee":"🥏","sports ball":"⚽","skateboard":"🛹","surfboard":"🏄","tennis racket":"🎾","baseball bat":"🏏","baseball glove":"🧤","cup":"☕","bowl":"🥣","traffic light":"🚦","fire hydrant":"🚒","stop sign":"🛑","parking meter":"🅿️","boat":"⛵","airplane":"✈️","train":"🚆","sheep":"🐑","cow":"🐄","elephant":"🐘","bear":"🐻","zebra":"🦓","kite":"🪁","couch":"🛋️","clock":"🕐","vase":"🏺"
+};
+
+const CHAIN_RELATIONS={
+"bench":["person","dog","cat","backpack","bottle","potted plant"],
+"bicycle":["person","backpack","helmet","car","bus","dog"],
+"car":["person","traffic light","stop sign","parking meter","bus","truck","bicycle","motorcycle"],
+"person":["bicycle","backpack","umbrella","dog","cat","car","bus","chair","bench","bottle","sports ball","skateboard","frisbee","handbag","suitcase","kite","tennis racket"],
+"dog":["person","bench","chair","frisbee","sports ball","bicycle"],
+"chair":["person","dog","cat","bench","bottle","cup","bowl","potted plant"],
+"bottle":["person","chair","bench","backpack","cup","bowl"],
+"potted plant":["chair","bench","person","vase","clock"],
+"bus":["person","car","traffic light","stop sign","bench","backpack","bicycle"],
+"truck":["car","bus","person","traffic light","stop sign"],
+"motorcycle":["person","bicycle","car","helmet","backpack"],
+"bird":["potted plant","bench","person","kite","airplane"],
+"cat":["person","chair","bench","dog","backpack"],
+"horse":["person","dog","bicycle","car"],
+"backpack":["person","bicycle","chair","bench","bus","car","dog"],
+"umbrella":["person","bench","chair","backpack","bicycle"],
+"handbag":["person","chair","bench","suitcase","backpack"],
+"suitcase":["person","handbag","backpack","bus","train","airplane","car"],
+"frisbee":["person","dog","sports ball","bench"],
+"sports ball":["person","dog","frisbee","bench","bicycle"],
+"skateboard":["person","bicycle","backpack","bench"],
+"surfboard":["person","beach","car","backpack"],
+"tennis racket":["person","sports ball","bench","backpack"],
+"baseball bat":["person","baseball glove","sports ball","bench"],
+"baseball glove":["person","baseball bat","sports ball"],
+"cup":["person","chair","bottle","bowl","bench"],
+"bowl":["cup","bottle","chair","person"],
+"traffic light":["car","bus","truck","person","bicycle","stop sign"],
+"fire hydrant":["dog","person","car","bench"],
+"stop sign":["car","bus","person","traffic light","bicycle"],
+"parking meter":["car","person","bicycle","bench"],
+"boat":["person","backpack","bird","airplane"],
+"airplane":["person","suitcase","bird","kite","train","bus"],
+"train":["person","suitcase","backpack","bus","car","bench"],
+"sheep":["person","dog","horse","bench"],
+"cow":["person","sheep","horse","bench"],
+"elephant":["person","bench","car"],
+"bear":["person","bench","backpack"],
+"zebra":["person","bench","car"],
+"kite":["person","bird","airplane","bench"],
+"couch":["person","chair","potted plant","clock","vase"],
+"clock":["chair","couch","vase","person"],
+"vase":["potted plant","chair","clock","person"]
+};
+// sanitize: only keep targets that exist in EMOJI and not self
+Object.keys(CHAIN_RELATIONS).forEach(k=>{
+ CHAIN_RELATIONS[k]=[...new Set(CHAIN_RELATIONS[k].filter(v=>EMOJI[v]&&v!==k))];
+});
+
+const HINT_TEXT={
+"bench":"Benches often have people or dogs nearby",
+"bicycle":"Where there's a bicycle, there's usually a person",
+"car":"Cars are near people, traffic lights, or other vehicles",
+"person":"People carry backpacks, umbrellas, or walk dogs",
+"dog":"Dogs are almost always with a person",
+"chair":"Chairs are used by people, near tables",
+"bottle":"Bottles are carried by people or on benches",
+"potted plant":"Plants sit near chairs or benches",
+"bus":"Buses pick up people and stop near cars",
+"truck":"Trucks share roads with cars and buses",
+"motorcycle":"Motorcycles are ridden by people",
+"bird":"Birds sit near trees or fly near kites",
+"cat":"Cats sit with people on benches",
+"horse":"Horses are often near people",
+"backpack":"Backpacks are worn by people on bicycles or buses",
+"umbrella":"Umbrellas are held by people",
+"handbag":"Handbags belong to people",
+"suitcase":"Suitcases travel with people on buses or trains",
+"frisbee":"Frisbees are thrown by people and dogs",
+"sports ball":"Balls are played with by people and dogs",
+"skateboard":"Skateboards are ridden by people",
+"surfboard":"Surfboards are carried by people",
+"tennis racket":"Rackets are held by people",
+"baseball bat":"Bats are used by people",
+"baseball glove":"Gloves are worn by people",
+"cup":"Cups are held by people at benches",
+"bowl":"Bowls are near cups and people",
+"traffic light":"Traffic lights control cars and people",
+"fire hydrant":"Hydrants are sniffed by dogs",
+"stop sign":"Stop signs stop cars for people",
+"parking meter":"Meters are paid by people with cars",
+"boat":"Boats carry people",
+"airplane":"Airplanes carry people and suitcases",
+"train":"Trains carry people with backpacks",
+"sheep":"Sheep are watched by people and dogs",
+"cow":"Cows are near people",
+"elephant":"Statues near benches and people",
+"bear":"Toys or statues near people",
+"zebra":"Seen near people in parks",
+"kite":"Kites are flown by people",
+"couch":"Couches are used by people",
+"clock":"Clocks hang near chairs and people",
+"vase":"Vases sit near plants and people"
+};
+
+const SAVE_KEY="naturemate_chain_save_v1";
+let state={current:null,history:[],xp:0,chain:0,hintsLeft:3,hinted:[],mistakes:0,wrongAttempts:0,lastMistakeObj:null,totalChains:0};
+let busy=false;
+
+function xpForChain(n){ // 10,15,20...
+ const v=10 + (n-1)*5; return Math.min(100, v);
+}
+
+function showToast(msg){
+ const c=document.getElementById('toasts'); const t=document.createElement('div'); t.className='toast'; t.textContent=msg; c.appendChild(t); setTimeout(()=>t.remove(),2600);
+}
+function saveLocal(){
+ try{
+  const payload={...state,history:[...state.history],hinted:[...state.hinted],savedAt:Date.now()};
+  localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+  showToast("✓ Game saved locally");
+ }catch(e){console.error(e); showToast("Save failed");}
+}
+function loadLocal(){
+ try{
+  const raw=localStorage.getItem(SAVE_KEY); if(!raw) return null;
+  const o=JSON.parse(raw); return o;
+ }catch(e){return null;}
+}
+function formatTime(ts){
+ const d=new Date(ts); const diff=Date.now()-ts;
+ if(diff<60000) return "Just now";
+ if(diff<3600000) return Math.floor(diff/60000)+"m ago";
+ if(diff<86400000) return Math.floor(diff/3600000)+"h ago";
+ return d.toLocaleDateString();
+}
+
+function pickStart(){
+ const starters=["person","bench","bicycle","dog","bird","car","bus","chair","potted plant"];
+ const s=starters[Math.floor(Math.random()*starters.length)];
+ return s;
+}
+function renderCurrent(){
+ const cur=state.current;
+ document.getElementById('curEmoji').textContent=EMOJI[cur]||"❓";
+ document.getElementById('curTitle').textContent=cur.toUpperCase();
+ document.getElementById('curHint').textContent=HINT_TEXT[cur]? `Think: ${HINT_TEXT[cur].toLowerCase()}.` : `Find something related to a ${cur}.`;
+ document.getElementById('chainCount').textContent=`🔥 CHAIN ${state.chain}`;
+ document.getElementById('xpCount').textContent=`${state.xp} XP • ${state.chain} links`;
+ document.getElementById('hintBtn').textContent=`💡 Hint — ${state.hintsLeft} left`;
+ document.getElementById('hintBtn').disabled=state.hintsLeft<=0;
+ // mistakes
+ const mp=document.getElementById('mistakePills'); mp.innerHTML='';
+ for(let i=0;i<3;i++){
+  const d=document.createElement('div'); d.style.width='10px'; d.style.height='10px'; d.style.borderRadius='999px'; d.style.background=i<state.wrongAttempts?'var(--fail)':'var(--line)'; mp.appendChild(d);
+ }
+ // chain strip
+ const strip=document.getElementById('chainStrip'); strip.innerHTML='';
+ state.history.forEach((id,idx)=>{
+  const node=document.createElement('div'); node.className='chain-node'+(idx===state.history.length-1?' active':'');
+  node.textContent=EMOJI[id]||"?";
+  const lab=document.createElement('span'); lab.textContent=id;
+  node.appendChild(lab);
+  strip.appendChild(node);
+  if(idx < state.history.length-1){
+   const ar=document.createElement('div'); ar.className='arrow'; ar.textContent='→'; strip.appendChild(ar);
+  }
+ });
+ // scanning text
+ document.getElementById('scanStatus').textContent=`SCANNING... FIND LINK FOR ${cur.toUpperCase()}`;
+}
+function nextValidTarget(from){
+ const opts=CHAIN_RELATIONS[from]||[];
+ if(opts.length===0) return null;
+ // avoid immediate back, prefer not used in last 4
+ const recent=state.history.slice(-4);
+ const filtered=opts.filter(o=>!recent.includes(o));
+ const pool=filtered.length>=1?filtered:opts.filter(o=>o!==state.history[state.history.length-2]);
+ const choices=pool.length?pool:opts;
+ return choices[Math.floor(Math.random()*choices.length)];
+}
+function startNewChain(startId=null){
+ state={current:startId||pickStart(),history:[],xp:0,chain:0,hintsLeft:3,hinted:[],mistakes:0,wrongAttempts:0,lastMistakeObj:null,totalChains:0};
+ state.history.push(state.current);
+ state.chain=1;
+ renderCurrent();
+ showToast(`🌱 Chain started with ${state.current}`);
+}
+function continueChain(){
+ const saved=loadLocal();
+ if(!saved){startNewChain();return;}
+ state={...saved,history:saved.history||[],hinted:saved.hinted||[]};
+ renderCurrent();
+ showToast("Chain restored");
+}
+
+async function setupCamera(){
+ setStep(2);
+ try{
+  const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
+  const v=document.getElementById('video'); v.srcObject=stream; await v.play();
+  stepEls[2].classList.add('done'); stepEls[2].querySelector('b').textContent='✓'; setStep(3);
+  setTimeout(()=>{markAllDone(); document.getElementById('loading').style.display='none'; document.getElementById('app').style.display='block';},400);
+ }catch(e){console.error(e); markAllDone(); document.getElementById('loading').style.display='none'; document.getElementById('app').style.display='block'; showToast("⚠ Camera permission needed");}
+}
+
+try{await loadModel();}catch(e){document.getElementById('loading').style.display='none';document.getElementById('app').style.display='block';}
+await setupCamera();
+
+// check saved game modal
+const saved=loadLocal();
+if(saved){
+ document.getElementById('sLen').textContent=saved.chain||saved.history?.length||0;
+ document.getElementById('sXp').textContent=saved.xp||0;
+ document.getElementById('sCur').textContent=(saved.current||"").toUpperCase();
+ document.getElementById('sTime').textContent=formatTime(saved.savedAt||Date.now());
+ document.getElementById('savedModal').classList.add('on');
+}else{
+ startNewChain();
+}
+renderCurrent();
+
+const video=document.getElementById('video'),capBtn=document.getElementById('capture'),cvs=document.createElement('canvas'),camWrap=document.getElementById('camWrap');
+capBtn.addEventListener('click',async()=>{
+ if(busy) return;
+ if(!detector){showToast("⚠ AI not ready"); return;}
+ if(!state.current){return;}
+ busy=true; capBtn.disabled=true; capBtn.textContent="⏳ Scanning..."; camWrap.classList.add('scanning'); camWrap.classList.remove('success','fail');
+ const currentAtCapture=state.current;
+ const chainAtCapture=state.chain;
+ try{
+  const MAX=640; let w=video.videoWidth||1280,h=video.videoHeight||720;
+  const sc=Math.min(1,MAX/Math.max(w,h)); w=Math.round(w*sc); h=Math.round(h*sc);
+  cvs.width=w; cvs.height=h; cvs.getContext('2d').drawImage(video,0,0,w,h);
+  const dataUrl=cvs.toDataURL('image/jpeg',0.65);
+  let results;
+  try{results=await detector(dataUrl,{threshold:0.20});}
+  catch(inf){throw {isInfer:true,orig:inf};}
+  // find best detection among valid COCO labels
+  const detectedBest=results.sort((a,b)=>b.score-a.score)[0]||null;
+  if(!detectedBest || detectedBest.score<0.20){
+   // pure detection failure - no penalty
+   camWrap.classList.add('fail'); setTimeout(()=>camWrap.classList.remove('fail'),500);
+   document.getElementById('wrongDetail').innerHTML=`I couldn't identify anything.<br><span class="small">Try moving closer, better light.</span>`;
+   document.getElementById('wrongMistake').textContent=`No penalty — try again`;
+   document.getElementById('wrongRes').classList.add('on');
+   showToast("No object — try again");
+   return;
+  }
+  const detLabel=String(detectedBest.label||'').toLowerCase();
+  const validTargets=(CHAIN_RELATIONS[currentAtCapture]||[]).map(s=>s.toLowerCase());
+  const isValid=validTargets.includes(detLabel);
+  if(isValid){
+   // SUCCESS
+   if(state.current!==currentAtCapture){return;} // stale
+   camWrap.classList.add('success');
+   const xpGain=xpForChain(state.chain+1);
+   state.xp+=xpGain; state.chain+=1; state.history.push(detLabel);
+   // anti-repeat: don't immediately go back, we already have logic in nextValidTarget
+   // reset wrong attempts
+   state.wrongAttempts=0; state.lastMistakeObj=null;
+   // success modal
+   document.getElementById('fromEmoji').textContent=EMOJI[currentAtCapture]||"❓";
+   document.getElementById('toEmoji').textContent=EMOJI[detLabel]||"❓";
+   document.getElementById('resDetail').textContent=`${currentAtCapture.toUpperCase()} → ${detLabel.toUpperCase()} detected`;
+   document.getElementById('resConf').textContent=Math.round(detectedBest.score*100)+"%";
+   document.getElementById('resRewards').innerHTML=`🔥 CHAIN ${state.chain}<br>+${xpGain} XP`;
+   document.getElementById('res').classList.add('on');
+   const f=document.createElement('div'); f.className='float'; f.textContent=`+${xpGain} XP`; document.getElementById('mainCard').appendChild(f); setTimeout(()=>f.remove(),900);
+   renderCurrent();
+   // auto-save quietly every 3 links
+   if(state.chain%3===0){try{localStorage.setItem(SAVE_KEY, JSON.stringify({...state,savedAt:Date.now()}));}catch(e){}}
+  }else{
+   // WRONG OBJECT - counts as mistake
+   camWrap.classList.add('fail'); setTimeout(()=>camWrap.classList.remove('fail'),600);
+   state.wrongAttempts+=1; state.lastMistakeObj=detLabel;
+   if(state.wrongAttempts>=3){
+    // chain broken
+    document.getElementById('bLen').textContent=state.chain;
+    document.getElementById('bXp').textContent=state.xp+" XP";
+    document.getElementById('bBest').textContent=state.history.slice(-3).join(" → ").toUpperCase();
+    document.getElementById('broken').classList.add('on');
+    showToast("🔗 Chain broken");
+   }else{
+    document.getElementById('wrongDetail').innerHTML=`Detected:<br><b style="font-size:20px">${EMOJI[detLabel]||"❓"} ${detLabel.toUpperCase()}</b><br><br>Current:<br><b>${EMOJI[currentAtCapture]||"❓"} ${currentAtCapture.toUpperCase()}</b><br><br>That's not a valid connection.`;
+    document.getElementById('wrongMistake').textContent=`Mistake ${state.wrongAttempts}/3`;
+    document.getElementById('wrongRes').classList.add('on');
+   }
+   renderCurrent();
+  }
+ }catch(e){
+  console.error(e);
+  if(e&&e.isInfer){showToast("AI error — try again");}else{showToast("Capture error — try again");}
+ }finally{
+  camWrap.classList.remove('scanning'); busy=false; capBtn.disabled=false; capBtn.textContent="📷 Capture";
+ }
+});
+
+document.getElementById('nextChain').addEventListener('click',()=>{
+ document.getElementById('res').classList.remove('on'); camWrap.classList.remove('success','fail');
+ // choose next current as last detected
+ const last=state.history[state.history.length-1];
+ state.current=last;
+ // ensure graph not dead-end: if no valid targets, pick fallback that is valid and not recent
+ if(!CHAIN_RELATIONS[state.current]||CHAIN_RELATIONS[state.current].length===0){
+  const fallback=Object.keys(CHAIN_RELATIONS).find(k=>CHAIN_RELATIONS[k].length>0);
+  if(fallback) state.current=fallback;
+ }
+ renderCurrent();
+ if(state.chain>=50){showToast("Incredible! 50+ chain! 🔥");}
+});
+document.getElementById('wrongOk').addEventListener('click',()=>{document.getElementById('wrongRes').classList.remove('on'); camWrap.classList.remove('fail');});
+
+document.getElementById('hintBtn').addEventListener('click',()=>{
+ if(state.hintsLeft<=0) return;
+ const valid=CHAIN_RELATIONS[state.current]||[];
+ const remaining=valid.filter(v=>!state.hinted.includes(v));
+ if(remaining.length===0){showToast("No more hints for this object"); return;}
+ const hint=remaining[Math.floor(Math.random()*remaining.length)];
+ state.hinted.push(hint); state.hintsLeft-=1;
+ const box=document.getElementById('hintBox'); box.classList.add('on');
+ box.innerHTML=`💡 Hint: Try finding a <b>${hint.toUpperCase()}</b> ${EMOJI[hint]||""}<br><span class="small">${HINT_TEXT[hint]||"Look around for something connected."}</span>`;
+ renderCurrent();
+ if(state.hintsLeft<=0) document.getElementById('hintBtn').disabled=true;
+});
+
+document.getElementById('saveBtn').addEventListener('click',saveLocal);
+document.getElementById('newBtn').addEventListener('click',()=>{
+ if(confirm("Start new chain? Current chain will be lost unless saved.")){startNewChain();}
+});
+document.getElementById('continueBtn').addEventListener('click',()=>{
+ // continue just renders - chain continues
+ renderCurrent(); showToast("Continue the chain!");
+});
+document.getElementById('playAgain').addEventListener('click',()=>{
+ document.getElementById('broken').classList.remove('on'); startNewChain();
+});
+document.getElementById('saveFromBroken').addEventListener('click',()=>{saveLocal();});
+document.getElementById('quitFromBroken').addEventListener('click',()=>{document.getElementById('quitModal').classList.add('on');});
+document.getElementById('quitBtn').addEventListener('click',()=>{document.getElementById('quitModal').classList.add('on');});
+document.getElementById('qContinue').addEventListener('click',()=>document.getElementById('quitModal').classList.remove('on'));
+document.getElementById('qSaveQuit').addEventListener('click',()=>{saveLocal(); setTimeout(()=>{window.location.href='./game.html';},400);});
+document.getElementById('qQuit').addEventListener('click',()=>{window.location.href='./game.html';});
+
+// saved modal
+document.getElementById('sContinue').addEventListener('click',()=>{document.getElementById('savedModal').classList.remove('on'); continueChain();});
+document.getElementById('sNew').addEventListener('click',()=>{
+ if(confirm("Overwrite saved game with new chain?")){
+  document.getElementById('savedModal').classList.remove('on');
+  try{localStorage.removeItem(SAVE_KEY);}catch(e){}
+  startNewChain();
+ }
+});
+
+// cleanup camera on page hide
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden){/* keep stream */}
+});
+window.addEventListener('beforeunload',()=>{
+ try{localStorage.setItem(SAVE_KEY, JSON.stringify({...state,savedAt:Date.now()}));}catch(e){}
+});
+</script>
+</body>
+</html>
