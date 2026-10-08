@@ -230,8 +230,6 @@ let detector = null;
 let usingWebGPU = false;
 async function loadModel() {
     try {
-        updateProgress(10, "Loading AI model...");
-
         detector = await pipeline(
             "object-detection",
             "Xenova/yolos-tiny",
@@ -241,7 +239,6 @@ async function loadModel() {
             }
         );
 
-        updateProgress(100, "AI model ready!");
         console.log("YOLOS loaded using WASM");
 
     } catch (error) {
@@ -249,7 +246,6 @@ async function loadModel() {
         alert("AI model could not be loaded.");
     }
 }
-
 
 /* =========================================================
    MODEL DOWNLOAD PROGRESS
