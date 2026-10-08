@@ -228,122 +228,26 @@ console.log("⚙️ Transformers configured");
 
 let detector = null;
 let usingWebGPU = false;
-
-
 async function loadModel() {
-
-  setStep(1);
-
-  meta.textContent =
-    "Loading lightweight vision AI…";
-
-
-  /*
-   * Try WebGPU first.
-   */
-
-  if ("gpu" in navigator) {
-
     try {
+        updateProgress(10, "Loading AI model...");
 
-      console.log(
-        "⚡ Trying WebGPU..."
-      );
+        detector = await pipeline(
+            "object-detection",
+            "Xenova/yolos-tiny",
+            {
+                dtype: "q8",
+                progress_callback: handleProgress
+            }
+        );
 
-      meta.textContent =
-        "Starting GPU vision engine…";
-
-      detector = await pipeline(
-        "object-detection",
-        "Xenova/yolos-tiny",
-        {
-          device: "webgpu",
-          dtype: "q8",
-
-          progress_callback:
-            handleProgress
-        }
-      );
-
-      usingWebGPU = true;
-
-      console.log(
-        "⚡ WebGPU enabled"
-      );
+        updateProgress(100, "AI model ready!");
+        console.log("YOLOS loaded using WASM");
 
     } catch (error) {
-
-      console.warn(
-        "WebGPU failed. Falling back to WASM.",
-        error
-      );
-
-      detector = null;
-      usingWebGPU = false;
+        console.error("Model loading failed:", error);
+        alert("AI model could not be loaded.");
     }
-  }
-
-
-  /*
-   * WASM fallback.
-   */
-
-  if (!detector) {
-
-    console.log(
-      "🧠 Loading YOLOS-Tiny with WASM..."
-    );
-
-    meta.textContent =
-      "Loading lightweight vision model…";
-
-    detector = await pipeline(
-      "object-detection",
-      "Xenova/yolos-tiny",
-      {
-        dtype: "q8",
-
-        progress_callback:
-          handleProgress
-      }
-    );
-
-    usingWebGPU = false;
-  }
-
-
-  bar.style.width = "100%";
-
-  setStep(3);
-
-  steps[0]
-    .querySelector("b")
-    .textContent = "✓";
-
-  steps[1]
-    .querySelector("b")
-    .textContent = "✓";
-
-  steps[2]
-    .querySelector("b")
-    .textContent = "✓";
-
-
-  meta.textContent =
-    usingWebGPU
-      ? "✓ AI ready — GPU acceleration enabled"
-      : "✓ AI ready — running locally";
-
-
-  console.log(
-    "✅ YOLOS-Tiny ready",
-    {
-      backend:
-        usingWebGPU
-          ? "WebGPU"
-          : "WASM"
-    }
-  );
 }
 
 
