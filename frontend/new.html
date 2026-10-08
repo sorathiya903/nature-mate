@@ -952,22 +952,18 @@ captureBtn.addEventListener(
 
     try {
 
-      const w =
-        video.videoWidth ||
-        1280;
+      const MAX_SIZE = 640;
 
+let w = video.videoWidth || 1280;
+let h = video.videoHeight || 720;
 
-      const h =
-        video.videoHeight ||
-        720;
+const scale = Math.min(1, MAX_SIZE / Math.max(w, h));
 
+w = Math.round(w * scale);
+h = Math.round(h * scale);
 
-      canvas.width =
-        w;
-
-
-      canvas.height =
-        h;
+canvas.width = w;
+canvas.height = h;
 
 
       const ctx =
